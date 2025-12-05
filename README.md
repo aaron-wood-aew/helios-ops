@@ -1,73 +1,71 @@
-# React + TypeScript + Vite
+# Helios.Ops Space Weather Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A single-pane-of-glass operational dashboard for monitoring Space Weather events in real-time. Features live data from NOAA SWPC, GOES-16 solar imagery, and a historical replay system.
 
-Currently, two official plugins are available:
+![Helios.Ops Space Weather Dashboard](/Users/aaron/.gemini/antigravity/brain/31782cfd-9be6-4e78-8e89-6ae403e59205/uploaded_image_1764969418583.png)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Technology Stack
 
-## React Compiler
+*   **Frontend:** React, TypeScript, Vite, Tailwind CSS, Recharts.
+*   **Backend:** Python, FastAPI, SQLModel (SQLite), APScheduler.
+*   **Data Sources:** NOAA SWPC (Live), NASA DONKI (History).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Prerequisites
 
-## Expanding the ESLint configuration
+*   **Node.js** (v18+)
+*   **Python** (v3.10+)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Quick Start
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 1. Backend Setup (Archival Service)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+The backend handles data archiving and serves the time-travel API.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+# Start the server (runs on localhost:8000)
+python main.py
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+*Note: The backend will immediately start fetching live data every 5 minutes to populate the database.*
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### 2. Frontend Setup (Dashboard)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Run the dashboard interface.
+
+```bash
+# In the project root (space-dashboard/)
+npm install
+npm run dev
 ```
+
+Open your browser to `http://localhost:5174` (or whatever port Vite assigned).
+
+## Features
+
+### Live Mode
+*   **Solar Imagery:** Real-time **GOES-16 SUVI** feed (131Å - 304Å).
+*   **Charts:** X-Ray Flux, Proton Flux, Solar Wind (plasma/mag), Kp Index.
+*   **Operatonal Impact:** Real-time status matrix for HF Comms, GPS, Satellites, and Radar.
+*   **Alerts:** Live scrolling ticker of NOAA SWPC alerts. Click to view full text.
+
+### Archive Mode (Time Travel)
+*   Click the **"ARCHIVES"** button in the header.
+*   Select a date range or a specific major event.
+*   The dashboard toggles to **Replay** mode, sourcing data from your local `backend/space_weather.db`.
+*   *Note: Replay allows you to analyze past events exactly as they appeared.*
+
+## API Keys (Optional)
+
+Historical major event logs use the NASA DONKI API.
+To prevent rate-limiting, replace `'DEMO_KEY'` in `src/api/nasa.ts` with your own key from [api.nasa.gov](https://api.nasa.gov/).
+
+## Architecture
+
+*   `src/`: React Frontend.
+*   `backend/`: FastAPI Backend.
+*   `backend/space_weather.db`: Local SQLite database for archives.
