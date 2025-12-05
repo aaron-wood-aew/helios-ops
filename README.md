@@ -2,7 +2,7 @@
 
 A single-pane-of-glass operational dashboard for monitoring Space Weather events in real-time. Features live data from NOAA SWPC, GOES-16 solar imagery, and a historical replay system.
 
-![Helios.Ops Space Weather Dashboard](/Users/aaron/.gemini/antigravity/brain/31782cfd-9be6-4e78-8e89-6ae403e59205/uploaded_image_1764969418583.png)
+![Helios.Ops Space Weather Dashboard](assets/screenshot.png)
 
 ## Technology Stack
 
