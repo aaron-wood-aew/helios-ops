@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-space-slate: #0f172a;
+  --color-space-blue: #0ea5e9;
+  --color-space-amber: #f59e0b;
+  --color-space-red: #ef4444;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --animate-marquee: marquee 120s linear infinite;
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(100%);
+    }
+
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-space-slate text-white;
+  }
+}
