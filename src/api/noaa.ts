@@ -47,14 +47,30 @@ export const noaaApi = {
     },
 
     getKpIndex: async () => {
-        // Note: Kp data often comes from a different endpoint structure, using the 1-minute or 3-hour observed
-        const response = await axios.get<KpIndex[]>(`${BASE_URL}/planetary_k_index_1m.json`);
-        return response.data;
+        // Note: Using the observed Kp archive which covers past ~7 days
+        const response = await axios.get<any[]>(`https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json`);
+        // The array also includes forecasts mixed in or header?
+        // Actually this file is often [time, kp, a_index, ...] without headers.
+        // Let's verify format. Actually the docs say it's [time_tag, kp, a_running, station_count].
+        // We need to map it to our KpIndex type.
+        // Example: ["2025-12-05 21:00:00", "2", "6", "8"]
+
+        // Wait, standard product is usually array of arrays with header.
+        // Let's safe parse.
+        const data = response.data;
+        const rows = Array.isArray(data[0]) ? data.slice(1) : data; // heuristic to skip header if present
+
+        return rows.map((row: any) => ({
+            time_tag: row[0],
+            kp_index: parseFloat(row[1]),
+            estimated_kp: parseFloat(row[1]) // fallback
+        })) as KpIndex[];
     },
 
     getSolarWindPlasma: async () => {
         // Returns array of arrays: [time, density, speed, temp]
-        const response = await axios.get<any[][]>(`https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json`);
+        // Using 7-day file to ensure coverage for 24h view and avoid empty 5-min file
+        const response = await axios.get<any[][]>(`https://services.swpc.noaa.gov/products/solar-wind/plasma-7-day.json`);
         // Skip header row
         return response.data.slice(1).map(row => ({
             time_tag: row[0],
@@ -66,7 +82,8 @@ export const noaaApi = {
 
     getSolarWindMag: async () => {
         // Returns array of arrays: [time, bx, by, bz, lon, lat, bt]
-        const response = await axios.get<any[][]>(`https://services.swpc.noaa.gov/products/solar-wind/mag-5-minute.json`);
+        // Using 7-day file
+        const response = await axios.get<any[][]>(`https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json`);
         // Skip header row
         return response.data.slice(1).map(row => ({
             time_tag: row[0],
@@ -110,5 +127,17 @@ export const noaaApi = {
         // The JSON is a flat list of objects.
         const response = await axios.get<any[]>(`https://services.swpc.noaa.gov/products/alerts.json`);
         return response.data;
+    },
+
+    getSUVIImages: async (channel: string) => {
+        const response = await axios.get<{ images: string[] }>(`http://localhost:8000/api/suvi/${channel}`);
+        return response.data.images;
+    },
+
+    getLASCOImages: async (type: 'c2' | 'c3') => {
+        // Fetch from NOAA JSON product
+        const response = await axios.get<{ url: string }[]>(`https://services.swpc.noaa.gov/products/animations/lasco-${type}.json`);
+        // URLs are relative to domain root, need to prepend
+        return response.data.map(item => `https://services.swpc.noaa.gov${item.url}`);
     }
 };

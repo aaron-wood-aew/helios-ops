@@ -4,14 +4,20 @@ import { noaaApi } from '../../api/noaa';
 import type { ProtonFlux } from '../../api/noaa';
 import { Loader2 } from 'lucide-react';
 import { useDashboard } from '../../context/DashboardContext';
+import { ensureContinuousData } from '../../lib/chartUtils';
 
 interface ChartData {
-    time: string;
+    time: number; // Changed to number
     flux10: number;
     flux100: number;
 }
 
-export const ProtonFluxChart: React.FC = () => {
+interface ProtonFluxChartProps {
+    syncId?: string;
+    domain?: [number, number];
+}
+
+export const ProtonFluxChart: React.FC<ProtonFluxChartProps> = ({ syncId, domain }) => {
     const { mode, replayRange } = useDashboard();
     const [data, setData] = useState<ChartData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -27,22 +33,23 @@ export const ProtonFluxChart: React.FC = () => {
                     result = await noaaApi.getProtonFlux();
                 }
 
-                // Process data: Group by timestamp to have multiple lines
-                const processed = new Map<string, ChartData>();
+                // Process data: Group by timestamp
+                const processed = new Map<number, ChartData>();
 
                 result.forEach(item => {
-                    const time = new Date(item.time_tag).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    if (!processed.has(item.time_tag)) {
-                        processed.set(item.time_tag, { time: time, flux10: 0, flux100: 0 });
+                    // Round to nearest minute for strict sync alignment
+                    const time = Math.round(new Date(item.time_tag).getTime() / 60000) * 60000;
+                    if (!processed.has(time)) {
+                        processed.set(time, { time: time, flux10: 0, flux100: 0 });
                     }
-                    const entry = processed.get(item.time_tag)!;
+                    const entry = processed.get(time)!;
 
                     if (item.energy === ">=10 MeV") entry.flux10 = item.flux;
                     if (item.energy === ">=100 MeV") entry.flux100 = item.flux;
                 });
 
-                // Convert map to array and take last 50 points for performance
-                setData(Array.from(processed.values()).slice(-50));
+                // No manual filter needed, Recharts handles domain
+                setData(Array.from(processed.values()));
             } catch (err) {
                 console.error("Failed to load proton flux", err);
             } finally {
@@ -53,10 +60,21 @@ export const ProtonFluxChart: React.FC = () => {
         fetchData();
         let interval: ReturnType<typeof setInterval>;
         if (mode === 'LIVE') {
-            interval = setInterval(fetchData, 60000); // Update every minute
+            interval = setInterval(fetchData, 60000);
         }
         return () => { if (interval) clearInterval(interval); };
     }, [mode, replayRange]);
+
+    //...
+
+    const visibleData = React.useMemo(() => {
+        if (!domain) return data.slice(-1000);
+        const [start, end] = domain;
+        const buffer = 15 * 60 * 1000;
+        const rawFiltered = data.filter(d => d.time >= start - buffer && d.time <= end + buffer);
+
+        return ensureContinuousData(rawFiltered, start, end, 60000, 'null');
+    }, [data, domain]);
 
     if (loading) {
         return <div className="h-full flex items-center justify-center text-space-blue"><Loader2 className="animate-spin" /></div>;
@@ -65,17 +83,27 @@ export const ProtonFluxChart: React.FC = () => {
     return (
         <div className="w-full h-full min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data}>
+                <LineChart data={visibleData} syncId={syncId}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-                    <XAxis dataKey="time" stroke="#94a3b8" tick={{ fontSize: 10 }} />
+                    <XAxis
+                        dataKey="time"
+                        type="number"
+                        domain={domain || ['auto', 'auto']}
+                        stroke="#94a3b8"
+                        tickFormatter={(t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        tick={{ fontSize: 10 }}
+                        allowDataOverflow={true}
+                    />
                     <YAxis stroke="#94a3b8" scale="log" domain={['auto', 'auto']} tick={{ fontSize: 10 }} width={40} />
                     <Tooltip
                         contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }}
                         itemStyle={{ color: '#e2e8f0' }}
+                        labelFormatter={(t) => new Date(t).toLocaleString()}
+                        animationDuration={0}
                     />
                     <Legend />
-                    <Line type="monotone" dataKey="flux10" name=">10 MeV" stroke="#f59e0b" dot={false} strokeWidth={2} />
-                    <Line type="monotone" dataKey="flux100" name=">100 MeV" stroke="#ef4444" dot={false} strokeWidth={2} />
+                    <Line type="monotone" dataKey="flux10" name=">10 MeV" stroke="#f59e0b" dot={false} strokeWidth={2} animationDuration={0} isAnimationActive={false} connectNulls />
+                    <Line type="monotone" dataKey="flux100" name=">100 MeV" stroke="#ef4444" dot={false} strokeWidth={2} animationDuration={0} isAnimationActive={false} connectNulls />
                 </LineChart>
             </ResponsiveContainer>
         </div>
