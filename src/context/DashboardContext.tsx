@@ -22,7 +22,13 @@ const DashboardContext = createContext<DashboardContextType | undefined>(undefin
 
 export const DashboardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [mode, setMode] = useState<DashboardMode>('LIVE');
-    const [viewMode, setViewMode] = useState<ViewMode>('OPS');
+
+    // Persist ViewMode to localStorage
+    const [viewMode, setViewMode] = useState<ViewMode>(() => {
+        const saved = localStorage.getItem('helios_view_mode');
+        return (saved === 'OPS' || saved === 'PHYSICS') ? saved : 'OPS';
+    });
+
     const [replayRange, setReplayRange] = useState<DateRange>({
         start: new Date(Date.now() - 86400000), // Default 24h back
         end: new Date()
@@ -30,8 +36,14 @@ export const DashboardProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     const toggleMode = (newMode: DashboardMode) => setMode(newMode);
 
+    // Wrapper to update storage
+    const handleSetViewMode = (newMode: ViewMode) => {
+        setViewMode(newMode);
+        localStorage.setItem('helios_view_mode', newMode);
+    };
+
     return (
-        <DashboardContext.Provider value={{ mode, toggleMode, viewMode, setViewMode, replayRange, setReplayRange }}>
+        <DashboardContext.Provider value={{ mode, toggleMode, viewMode, setViewMode: handleSetViewMode, replayRange, setReplayRange }}>
             {children}
         </DashboardContext.Provider>
     );
