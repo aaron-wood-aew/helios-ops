@@ -4,7 +4,7 @@ import { noaaApi } from '../../api/noaa';
 import type { DstIndex } from '../../api/noaa';
 import { Loader2 } from 'lucide-react';
 import { useDashboard } from '../../context/DashboardContext';
-import { ensureContinuousData } from '../../lib/chartUtils';
+
 
 interface DstIndexChartProps {
     syncId?: string;
@@ -90,7 +90,7 @@ export const DstIndexChart: React.FC<DstIndexChartProps> = ({ syncId, domain }) 
                         tick={{ fontSize: 9 }}
                         allowDataOverflow={true}
                     />
-                    <YAxis stroke="#94a3b8" idx={0} domain={['auto', 'auto']} tick={{ fontSize: 9 }} width={30} />
+                    <YAxis stroke="#94a3b8" domain={['auto', 'auto']} tick={{ fontSize: 9 }} width={30} />
                     <Tooltip
                         contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }}
                         labelFormatter={(t) => new Date(t).toLocaleString('en-US', { timeZone: 'UTC', month: '2-digit', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) + ' UTC'}

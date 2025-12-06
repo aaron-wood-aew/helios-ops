@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ErrorBoundary } from './components/layout/ErrorBoundary';
 import { AlertTicker } from './components/widgets/AlertTicker';
@@ -35,7 +35,7 @@ const DashboardContent = () => {
         <div className="col-span-full mb-1 flex justify-between items-end border-b border-white/10 pb-2">
           <div>
             <h1 className="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase">
-              Helios<span className="text-space-blue">.Ops</span>
+              helios<span className="text-space-blue">-ops</span>
             </h1>
             <p className="text-slate-400 font-mono text-[10px] tracking-widest">SPACE WEATHER SITUATIONAL AWARENESS</p>
           </div>

@@ -18,7 +18,7 @@ export function ensureContinuousData<T extends { time: number }>(
     const endTick = Math.ceil(end / intervalMs) * intervalMs;
 
     const filled: T[] = [];
-    let dataIdx = 0;
+    // let dataIdx = 0; // Unused
 
     // Create a map for fast lookup of existing data
     const dataMap = new Map<number, T>();

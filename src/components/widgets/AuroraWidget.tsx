@@ -9,10 +9,10 @@ interface AuroraFrame {
 }
 
 export const AuroraWidget: React.FC = () => {
-    const { mode } = useDashboard();
+    const { mode, replayRange } = useDashboard();
     const [frames, setFrames] = useState<AuroraFrame[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
     const [hemisphere, setHemisphere] = useState<'north' | 'south'>('north');
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -22,7 +22,18 @@ export const AuroraWidget: React.FC = () => {
         setLoading(true);
         setIsPlaying(false);
         try {
-            const data = await noaaApi.getAuroraAnimation(hemisphere);
+            let data: { url: string; time_tag: string }[] = [];
+
+            if (mode === 'REPLAY') {
+                const history = await noaaApi.getHistoryImages('aurora', replayRange.start, replayRange.end, hemisphere);
+                data = history.map(h => ({
+                    url: h.url,
+                    time_tag: h.time // history API returns 'time' as ISO string
+                }));
+            } else {
+                data = await noaaApi.getAuroraAnimation(hemisphere);
+            }
+
             // Sort by raw time_tag first (ISO)
             const sorted = data.sort((a, b) => a.time_tag.localeCompare(b.time_tag))
                 .map(d => ({
@@ -36,7 +47,7 @@ export const AuroraWidget: React.FC = () => {
                 }));
 
             setFrames(sorted);
-            setCurrentIndex(sorted.length - 1); // Start at latest
+            setCurrentIndex(mode === 'REPLAY' ? 0 : sorted.length - 1); // Start at latest for LIVE
             setIsPlaying(true);
         } catch (e) {
             console.error("Aurora load failed", e);
@@ -49,7 +60,7 @@ export const AuroraWidget: React.FC = () => {
         loadData();
         const interval = setInterval(loadData, 300000); // Reload data every 5m
         return () => clearInterval(interval);
-    }, [hemisphere, mode]);
+    }, [hemisphere, mode, replayRange]);
 
     // Animation Loop
     useEffect(() => {

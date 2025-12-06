@@ -5,11 +5,10 @@ import { useDashboard } from '../../context/DashboardContext';
 import { Loader2 } from 'lucide-react';
 import { ensureContinuousData } from '../../lib/chartUtils';
 
-interface SolarWindData {
+interface CombinedData {
     time: number;
     speed: number | null;
-    density: number | null;
-    temperature: number | null;
+    bz: number | null;
 }
 
 interface SolarWindChartProps {
@@ -18,7 +17,7 @@ interface SolarWindChartProps {
 }
 
 export const SolarWindChart: React.FC<SolarWindChartProps> = ({ syncId, domain }) => {
-    const [data, setData] = useState<SolarWindData[]>([]);
+    const [data, setData] = useState<CombinedData[]>([]);
     const [loading, setLoading] = useState(true);
     const { mode, replayRange } = useDashboard();
 
@@ -26,7 +25,7 @@ export const SolarWindChart: React.FC<SolarWindChartProps> = ({ syncId, domain }
         const fetchData = async () => {
             setLoading(true);
             try {
-                let sorted: SolarWindData[] = [];
+                let sorted: CombinedData[] = [];
                 if (mode === 'REPLAY') {
                     const result = await noaaApi.getHistoryWind(replayRange.start, replayRange.end);
                     sorted = result.map(r => ({
@@ -76,8 +75,6 @@ export const SolarWindChart: React.FC<SolarWindChartProps> = ({ syncId, domain }
         }
         return () => { if (interval) clearInterval(interval); };
     }, [mode, replayRange]);
-
-    // ...
 
     // Filter data to only show what is requested in the domain
     // Power Performance Optimization:

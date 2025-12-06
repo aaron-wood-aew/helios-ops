@@ -33,14 +33,29 @@ class DstIndex(SQLModel, table=True):
     time_tag: datetime = Field(primary_key=True)
     dst: float
 
+class ImageArchive(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    time_tag: datetime
+    product: str # "suvi", "lasco", "aurora"
+    channel: str # e.g. "131", "c2", "north"
+    local_path: str # e.g. "images/suvi/20251206_034400_131.png"
+
+import os
+
 # Database Setup
-sqlite_file_name = "space_weather.db"
+sqlite_file_name = os.getenv("DB_PATH", "space_weather.db")
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 
-engine = create_engine(sqlite_url)
+engine = create_engine(sqlite_url, connect_args={"check_same_thread": False, "timeout": 30})
+
+from sqlalchemy import text
+
+# ...
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
+    with engine.connect() as connection:
+        connection.execute(text("PRAGMA journal_mode=WAL;"))
 
 def get_session():
     with Session(engine) as session:

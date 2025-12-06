@@ -47,6 +47,8 @@ export interface DstIndex {
     dst: number;
 }
 
+const BACKEND_API = 'http://localhost:8000';
+
 export const noaaApi = {
     getProtonFlux: async () => {
         const response = await axios.get<ProtonFlux[]>(`${BASE_URL}/goes/primary/integral-protons-1-day.json`);
@@ -153,27 +155,30 @@ export const noaaApi = {
         return response.data;
     },
 
+    // ...
+
     getHistoryElectron: async (start: Date, end: Date) => {
         const s = start.toISOString();
         const e = end.toISOString();
-        const response = await axios.get<ElectronFlux[]>(`http://localhost:8000/history/electron?start=${s}&end=${e}`);
+        const response = await axios.get<ElectronFlux[]>(`${BACKEND_API}/history/electron?start=${s}&end=${e}`);
         return response.data;
     },
 
     getHistoryDst: async (start: Date, end: Date) => {
-        const s = start.toISOString();
-        const e = end.toISOString();
-        const response = await axios.get<DstIndex[]>(`http://localhost:8000/history/dst?start=${s}&end=${e}`);
+        const url = `${BACKEND_API}/history/dst?start=${start.toISOString()}&end=${end.toISOString()}`;
+        const response = await axios.get<DstIndex[]>(url);
+        return response.data;
+    },
+
+    getHistoryImages: async (product: 'suvi' | 'lasco' | 'aurora', start: Date, end: Date, channel?: string) => {
+        let url = `${BACKEND_API}/history/images?product=${product}&start=${start.toISOString()}&end=${end.toISOString()}`;
+        if (channel) url += `&channel=${channel}`;
+        const response = await axios.get<{ time: string, url: string }[]>(url);
         return response.data;
     },
 
     getArchiveStatus: async () => {
-        interface TableStats {
-            count: number;
-            start: string | null;
-            end: string | null;
-        }
-        const response = await axios.get<Record<string, TableStats>>(`http://localhost:8000/api/status`);
+        const response = await axios.get<Record<string, { count: number, start: string | null, end: string | null }>>(`${BACKEND_API}/api/status`);
         return response.data;
     },
 

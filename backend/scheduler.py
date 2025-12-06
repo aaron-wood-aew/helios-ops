@@ -146,10 +146,175 @@ def ingest_kp():
         print(f"Kp Ingest Fail: {e}")
 
 
+import re
+import os
+import shutil
+
+# ... existing imports ...
+from database import engine, XRayFlux, ProtonFlux, SolarWind, KpIndex, ElectronFlux, DstIndex, ImageArchive
+
+# ... existing URLs ...
+URL_SUVI_BASE = "https://services.swpc.noaa.gov/images/animations/suvi/primary/"
+URL_LASCO_C2 = "https://services.swpc.noaa.gov/products/animations/lasco-c2.json"
+URL_LASCO_C3 = "https://services.swpc.noaa.gov/products/animations/lasco-c3.json"
+URL_AURORA_N = "https://services.swpc.noaa.gov/products/animations/ovation_north_24h.json"
+URL_AURORA_S = "https://services.swpc.noaa.gov/products/animations/ovation_south_24h.json"
+
+IMAGE_DIR = "images"
+
+def ensure_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+def download_file(url, local_path):
+    # Don't re-download if exists
+    if os.path.exists(local_path):
+        return True
+    
+    try:
+        with requests.get(url, stream=True, timeout=10) as r:
+            r.raise_for_status()
+            with open(local_path, 'wb') as f:
+                shutil.copyfileobj(r.raw, f)
+        return True
+    except Exception as e:
+        print(f"Download Fail {url}: {e}")
+        return False
+
+# ... existing ingest functions ...
+
+def ingest_suvi():
+    channels = ["131", "171", "195", "284", "304", "094"]
+    base_storage = os.path.join(IMAGE_DIR, "suvi")
+    ensure_dir(base_storage)
+    
+    with Session(engine) as session:
+        for ch in channels:
+            try:
+                url = f"{URL_SUVI_BASE}{ch}/"
+                resp = requests.get(url, timeout=10)
+                # Regex for: or_suvi-l2-ci195_g19_s20251206T035200Z_e20251206T035600Z_v1-0-2.png
+                matches = re.findall(r'href="(or_suvi-l2-ci\d+_g\d+_s(\d{8}T\d{6}Z)_.*?\.png)"', resp.text)
+                
+                for filename, t_str in matches:
+                    # Parse Time: 20251206T035200Z
+                    dt = datetime.strptime(t_str, "%Y%m%dT%H%M%SZ")
+                    
+                    # Check DB
+                    stmt = select(ImageArchive).where(
+                        ImageArchive.time_tag == dt, 
+                        ImageArchive.product == "suvi", 
+                        ImageArchive.channel == ch
+                    )
+                    existing = session.exec(stmt).first()
+                    
+                    if not existing:
+                        file_url = url + filename
+                        local_path = os.path.join(base_storage, filename)
+                        
+                        if download_file(file_url, local_path):
+                            entry = ImageArchive(
+                                time_tag=dt,
+                                product="suvi",
+                                channel=ch,
+                                local_path=local_path
+                            )
+                            session.add(entry)
+            except Exception as e:
+                print(f"SUVI {ch} Ingest Fail: {e}")
+        session.commit()
+
+def ingest_lasco():
+    products = [("c2", URL_LASCO_C2), ("c3", URL_LASCO_C3)]
+    base_storage = os.path.join(IMAGE_DIR, "lasco")
+    ensure_dir(base_storage)
+
+    with Session(engine) as session:
+        for name, url in products:
+            try:
+                data = requests.get(url, timeout=10).json()
+                for row in data:
+                    rel_url = row['url'] # /images/animations/lasco-c2/20251205_0417_c2_512.jpg
+                    filename = rel_url.split('/')[-1]
+                    
+                    # Parse Time: 20251205_0417
+                    # Regex to extract date_time part
+                    match = re.search(r'(\d{8}_\d{4})', filename)
+                    if match:
+                        t_str = match.group(1)
+                        dt = datetime.strptime(t_str, "%Y%m%d_%H%M")
+                        
+                        stmt = select(ImageArchive).where(
+                            ImageArchive.time_tag == dt,
+                            ImageArchive.product == "lasco",
+                            ImageArchive.channel == name
+                        )
+                        existing = session.exec(stmt).first()
+                        
+                        if not existing:
+                            full_url = "https://services.swpc.noaa.gov" + rel_url
+                            local_path = os.path.join(base_storage, filename)
+                            
+                            if download_file(full_url, local_path):
+                                entry = ImageArchive(
+                                    time_tag=dt,
+                                    product="lasco",
+                                    channel=name,
+                                    local_path=local_path
+                                )
+                                session.add(entry)
+            except Exception as e:
+                print(f"LASCO {name} Ingest Fail: {e}")
+        session.commit()
+
+def ingest_aurora():
+    products = [("north", URL_AURORA_N), ("south", URL_AURORA_S)]
+    base_storage = os.path.join(IMAGE_DIR, "aurora")
+    ensure_dir(base_storage)
+    
+    with Session(engine) as session:
+        for name, url in products:
+            try:
+                data = requests.get(url, timeout=10).json()
+                for row in data:
+                    # {"url": "...", "time_tag": "2025-12-05T03:45:00Z"}
+                    t_str = row['time_tag']
+                    dt = datetime.strptime(t_str, "%Y-%m-%dT%H:%M:%SZ")
+                    
+                    stmt = select(ImageArchive).where(
+                        ImageArchive.time_tag == dt,
+                        ImageArchive.product == "aurora",
+                        ImageArchive.channel == name
+                    )
+                    existing = session.exec(stmt).first()
+                    
+                    if not existing:
+                        rel_url = row['url']
+                        filename = rel_url.split('/')[-1]
+                        full_url = "https://services.swpc.noaa.gov" + rel_url
+                        local_path = os.path.join(base_storage, filename)
+                        
+                        if download_file(full_url, local_path):
+                            entry = ImageArchive(
+                                time_tag=dt,
+                                product="aurora",
+                                channel=name,
+                                local_path=local_path
+                            )
+                            session.add(entry)
+            except Exception as e:
+                print(f"Aurora {name} Ingest Fail: {e}")
+        session.commit()
+
+
 def start_scheduler():
     scheduler = BackgroundScheduler()
     # Run immediately on startup
-    jobs = [ingest_xray, ingest_proton, ingest_electron, ingest_dst, ingest_solar_wind, ingest_kp]
+    jobs = [
+        ingest_xray, ingest_proton, ingest_electron, 
+        ingest_dst, ingest_solar_wind, ingest_kp,
+        ingest_suvi, ingest_lasco, ingest_aurora
+    ]
     
     for job in jobs:
         scheduler.add_job(job, 'interval', minutes=5, next_run_time=datetime.now())

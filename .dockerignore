@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.DS_Store
+backend/venv
+backend/__pycache__
+backend/images
+backend/*.db
+backend/*.db-journal
+backend/*.db-wal
+backend/space_weather.db*

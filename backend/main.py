@@ -1,12 +1,14 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import select, Session
-from database import create_db_and_tables, engine, XRayFlux, ProtonFlux, SolarWind, KpIndex, ElectronFlux, DstIndex
+from database import create_db_and_tables, engine, XRayFlux, ProtonFlux, SolarWind, KpIndex, ElectronFlux, DstIndex, ImageArchive
 from scheduler import start_scheduler
 from datetime import datetime
 from contextlib import asynccontextmanager
 import requests
 import re
+from fastapi.staticfiles import StaticFiles
+import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,6 +18,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Helios.Ops Backend", lifespan=lifespan)
 
+# Ensure directory exists first or StaticFiles might complain if missing on startup
+if not os.path.exists("images"):
+    os.makedirs("images")
+app.mount("/static/images", StaticFiles(directory="images"), name="images")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,6 +30,70 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/history/images")
+def get_history_images(
+    product: str, 
+    start: str, 
+    end: str, 
+    channel: str = None
+):
+    """
+    Get list of archived images for a product/channel within time range.
+    Returns: [{"time": "...", "url": "..."}]
+    """
+    try:
+        start_dt = datetime.fromisoformat(start.replace('Z', '+00:00'))
+        end_dt = datetime.fromisoformat(end.replace('Z', '+00:00'))
+    except ValueError:
+        return []
+
+    with Session(engine) as session:
+        query = select(ImageArchive).where(
+            ImageArchive.product == product,
+            ImageArchive.time_tag >= start_dt,
+            ImageArchive.time_tag <= end_dt
+        )
+        if channel:
+            query = query.where(ImageArchive.channel == channel)
+        
+        results = session.exec(query.order_by(ImageArchive.time_tag)).all()
+        
+        # Construct full URL
+        # Assuming backend is on localhost:8000 for now. 
+        # In a real app, use request.base_url or configured domain.
+        base_url = "http://localhost:8000/static/"
+        
+        data = []
+        for row in results:
+            # local_path is like "images/suvi/..."
+            # mounted at /static/images -> we want /static/images/suvi/...
+            # row.local_path starts with "images/", stripping it to append to base matches mount?
+            # Actually, if local_path is "images/suvi/foo.png", and mount is "images" -> "/static/images/suvi/foo.png" works if we strip the leading "images/" or if we mount root?
+            
+            # Let's fix pathing. 
+            # If mount: app.mount("/static/images", StaticFiles(directory="images"))
+            # File "images/suvi/foo.png" is accessible at "/static/images/suvi/foo.png"
+            
+            # row.local_path = "images/suvi/foo.png"
+            # We want "http://localhost:8000" + "/static/" + "images/suvi/foo.png" 
+            # -> "http://localhost:8000/static/images/suvi/foo.png"
+            
+            # Wait, if I mount "images" to "/static/images", then requesting "/static/images/suvi/foo.png" looks inside "images" directory for "suvi/foo.png".
+            # So I need to strip the leading "images/" from row.local_path if it's there.
+            
+            rel_path = row.local_path
+            if rel_path.startswith("images/"):
+                rel_path = rel_path[7:]
+            
+            url = f"{base_url}images/{rel_path}"
+            
+            data.append({
+                "time": row.time_tag.isoformat(),
+                "url": url
+            })
+            
+        return data
 
 @app.get("/history/xray")
 def get_xray_history(start: datetime, end: datetime):

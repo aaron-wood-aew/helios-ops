@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ImageLoopWidget } from './ImageLoopWidget';
 import { noaaApi } from '../../api/noaa';
-import { RefreshCw } from 'lucide-react';
+
+
+import { useDashboard } from '../../context/DashboardContext';
 
 export const CoronagraphWidget: React.FC = () => {
+    const { mode, replayRange } = useDashboard();
     const [view, setView] = useState<'c2' | 'c3'>('c3');
     const [images, setImages] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
@@ -11,9 +14,16 @@ export const CoronagraphWidget: React.FC = () => {
     const loadImages = async () => {
         setLoading(true);
         try {
-            const urls = await noaaApi.getLASCOImages(view);
-            // Limit to last 50 for performance
-            setImages(urls.slice(-50));
+            let urls: string[] = [];
+            if (mode === 'REPLAY') {
+                const history = await noaaApi.getHistoryImages('lasco', replayRange.start, replayRange.end, view);
+                urls = history.map(h => h.url);
+            } else {
+                urls = await noaaApi.getLASCOImages(view);
+                // Limit to last 50 for performance
+                urls = urls.slice(-50);
+            }
+            setImages(urls);
         } catch (err) {
             console.error("Failed to load LASCO images", err);
         } finally {
@@ -23,7 +33,7 @@ export const CoronagraphWidget: React.FC = () => {
 
     useEffect(() => {
         loadImages();
-    }, [view]);
+    }, [view, mode, replayRange]);
 
     // Extract time from: 20251205_2354_c3_512.jpg
     const extractTime = (url: string) => {

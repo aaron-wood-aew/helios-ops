@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RefreshCw } from 'lucide-react';
 import { noaaApi } from '../../api/noaa';
+import { useDashboard } from '../../context/DashboardContext';
 
 const CHANNELS = [
     { id: '131', color: 'text-teal-400', label: '131Å (Flares)' },
@@ -10,7 +11,10 @@ const CHANNELS = [
     { id: '304', color: 'text-red-400', label: '304Å (Filaments)' },
 ];
 
+
+
 export const SolarLoopWidget: React.FC = () => {
+    const { mode, replayRange } = useDashboard();
     const [channel, setChannel] = useState('195');
     const [images, setImages] = useState<string[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -31,20 +35,35 @@ export const SolarLoopWidget: React.FC = () => {
         setProgress(0);
 
         try {
-            const urls = await noaaApi.getSUVIImages(channel);
-            // Limit to last 100 frames to save bandwidth/memory for now (approx 8 hours)
-            const recentUrls = urls.slice(-100);
-            setImages(recentUrls);
+            let urls: string[] = [];
+
+            if (mode === 'REPLAY') {
+                const history = await noaaApi.getHistoryImages('suvi', replayRange.start, replayRange.end, channel);
+                urls = history.map(h => h.url);
+            } else {
+                urls = await noaaApi.getSUVIImages(channel);
+                // Limit to last 100 frames to save bandwidth/memory for now (approx 8 hours)
+                urls = urls.slice(-100);
+            }
+
+            if (urls.length === 0) {
+                // Handle no data
+                setLoading(false);
+                return;
+            }
+
+            setImages(urls);
+            setCurrentIndex(mode === 'REPLAY' ? 0 : urls.length - 1); // Start at beginning for replay, end for live
 
             // Preload images
             let loadedCount = 0;
-            const promises = recentUrls.map((url) => {
+            const promises = urls.map((url) => {
                 return new Promise<void>((resolve) => {
                     const img = new Image();
                     img.src = url;
                     img.onload = () => {
                         loadedCount++;
-                        setProgress(Math.round((loadedCount / recentUrls.length) * 100));
+                        setProgress(Math.round((loadedCount / urls.length) * 100));
                         imageCache.current.set(url, img);
                         resolve();
                     };
@@ -67,7 +86,7 @@ export const SolarLoopWidget: React.FC = () => {
     useEffect(() => {
         loadImages();
         return () => stopAnimation();
-    }, [channel]);
+    }, [channel, mode, replayRange]);
 
     const stopAnimation = () => {
         if (intervalRef.current) {

@@ -11,7 +11,7 @@ import { DstIndexChart } from '../widgets/DstIndexChart';
 import { ElectronFluxChart } from '../widgets/ElectronFluxChart';
 import { InterplanetaryMagChart } from '../widgets/InterplanetaryMagChart';
 import { AuroraWidget } from '../widgets/AuroraWidget';
-import { Disc, PlayCircle, Activity, Wind, Satellite, BarChart3, Radio, Clock, Map } from 'lucide-react';
+import { Disc, PlayCircle, Activity, Wind, Satellite, BarChart3, Clock, Map } from 'lucide-react';
 
 type TimeRange = 2 | 4 | 6 | 12 | 24;
 
