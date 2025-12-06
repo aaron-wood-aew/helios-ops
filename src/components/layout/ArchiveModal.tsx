@@ -67,11 +67,14 @@ export const ArchiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
             setReplayRange({ start, end });
             toggleMode('REPLAY');
             onClose();
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            setHydrateStats("Hydration Failed");
-        } finally {
+            setHydrateStats(`Failed: ${e.response?.status === 404 ? 'Backend Endpoint Not Found' : 'Download Error'}`);
+            // Don't clear hydrating immediately so user sees error
+            // But we need to allow retry.
             setHydrating(false);
+        } finally {
+            // setHydrating(false) moved to catch/success to manage state explicitly
         }
     };
 
@@ -202,8 +205,17 @@ export const ArchiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
                             </>
                         ) : (
                             <>
-                                <Play size={16} fill="currentColor" />
-                                Load Historical Data
+                                {hydrateStats?.startsWith("Failed") ? (
+                                    <span className="text-red-300 flex items-center gap-2">
+                                        <X size={16} />
+                                        {hydrateStats} - Retry?
+                                    </span>
+                                ) : (
+                                    <>
+                                        <Play size={16} fill="currentColor" />
+                                        Load Historical Data
+                                    </>
+                                )}
                             </>
                         )}
                     </button>
