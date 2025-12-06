@@ -232,4 +232,13 @@ export const noaaApi = {
         const response = await axios.get<{ status: string; user: string }>(`${BACKEND_API}/api/admin/system-status`);
         return response.data;
     },
+
+    hydrateArchive: async (start: Date, end: Date) => {
+        const s = start.toISOString();
+        const e = end.toISOString();
+        const response = await axios.post<{ status: string; downloaded: number; total_in_range: number }>(
+            `${BACKEND_API}/archive/hydrate?start=${s}&end=${e}`
+        );
+        return response.data;
+    },
 };

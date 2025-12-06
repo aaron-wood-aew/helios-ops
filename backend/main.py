@@ -251,16 +251,85 @@ def get_suvi_images(channel: str):
         response.raise_for_status()
         
         # Regex to find .png files in the href attributes
-        # Format: href="or_suvi-l2-ci195_g19_s20251205T235200Z_e20251205T235600Z_v1-0-2.png"
         matches = re.findall(r'href="(or_suvi-l2.*?.png)"', response.text)
-        
-        # Deduplicate and sort
         unique_matches = sorted(list(set(matches)))
-        
-        # Construct full URLs
         full_urls = [base_url + m for m in unique_matches]
         
         return {"images": full_urls}
     except Exception as e:
         print(f"Error fetching SUVI images: {e}")
         return {"error": str(e), "images": []}
+
+@app.post("/archive/hydrate")
+async def hydrate_archive(start: datetime, end: datetime):
+    """
+    Download images for the specified range if they are indexed but missing locally.
+    """
+    start_dt = start
+    end_dt = end
+    
+    # Base URLs map
+    BASE_URLS = {
+        "suvi": "https://services.swpc.noaa.gov/images/animations/suvi/primary/195/",
+        "lasco": {
+            "c2": "https://services.swpc.noaa.gov/images/animations/lasco-c2/",
+            "c3": "https://services.swpc.noaa.gov/images/animations/lasco-c3/"
+        },
+        "aurora": "https://services.swpc.noaa.gov/images/animations/ovation/north/"
+    }
+    
+    downloaded = 0
+    errors = 0
+    
+    with Session(engine) as session:
+        # Find images in range
+        query = select(ImageArchive).where(
+            ImageArchive.time_tag >= start_dt,
+            ImageArchive.time_tag <= end_dt
+        )
+        images = session.exec(query).all()
+        
+        for img in images:
+            # Check local file
+            # local_path is "images/suvi/filename.png"
+            # We are running in /app, so path is relative to CWD
+            # Just use img.local_path directly if valid
+            # Security check: ensure path is safe
+            if ".." in img.local_path or img.local_path.startswith("/"):
+                # Safety skip
+                continue
+                
+            file_path = img.local_path
+            
+            if os.path.exists(file_path):
+                continue
+                
+            # Download
+            try:
+                # Construct Source URL
+                filename = os.path.basename(file_path)
+                
+                if img.product == "suvi":
+                     src = BASE_URLS["suvi"] + filename
+                elif img.product == "lasco":
+                     src = BASE_URLS["lasco"][img.channel] + filename
+                elif img.product == "aurora":
+                     src = BASE_URLS["aurora"] + filename
+                else:
+                    continue
+                
+                # Ensure dir exists
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                
+                # Stream download
+                with requests.get(src, stream=True, timeout=10) as r:
+                    r.raise_for_status()
+                    with open(file_path, 'wb') as f:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                downloaded += 1
+            except Exception as e:
+                print(f"Hydration failed for {file_path}: {e}")
+                errors += 1
+                
+    return {"status": "complete", "downloaded": downloaded, "errors": errors, "total_in_range": len(images)}

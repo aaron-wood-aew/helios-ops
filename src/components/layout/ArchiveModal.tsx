@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDashboard } from '../../context/DashboardContext';
 import { useAuth } from '../../context/AuthContext';
-import { X, Calendar, Play, ShieldCheck, Activity } from 'lucide-react';
+import { X, Calendar, Play, ShieldCheck, Activity, Loader2 } from 'lucide-react';
 
 export const ArchiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const { setReplayRange, toggleMode } = useDashboard();
@@ -12,6 +12,10 @@ export const ArchiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     const [sysStatus, setSysStatus] = useState<any>(null);
     const [loadingStatus, setLoadingStatus] = useState(false);
     const [isStatusExpanded, setIsStatusExpanded] = useState(false);
+
+    // Hydration State
+    const [hydrating, setHydrating] = useState(false);
+    const [hydrateStats, setHydrateStats] = useState<string | null>(null);
 
     React.useEffect(() => {
         // Fetch Admin System Status if logged in
@@ -25,7 +29,6 @@ export const ArchiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     React.useEffect(() => {
         if (isStatusExpanded && !status) {
             setLoadingStatus(true);
-            // Dynamic import to avoid circular dep if needed, or just standard import
             import('../../api/noaa').then(({ noaaApi }) => {
                 noaaApi.getArchiveStatus().then(setData => {
                     setStatus(setData);
@@ -45,13 +48,31 @@ export const ArchiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
         });
     };
 
-    const handleApply = () => {
-        setReplayRange({
-            start: new Date(startStr),
-            end: new Date(endStr)
-        });
-        toggleMode('REPLAY');
-        onClose();
+    const handleApply = async () => {
+        setHydrating(true);
+        setHydrateStats("Initializing Time Machine...");
+
+        try {
+            const { noaaApi } = await import('../../api/noaa');
+            const start = new Date(startStr);
+            const end = new Date(endStr);
+
+            // Hydrate (Backend downloads images)
+            const res = await noaaApi.hydrateArchive(start, end);
+            setHydrateStats(`Hydrated: ${res.downloaded} images (${res.total_in_range} indexed)`);
+
+            // Short delay to show success
+            await new Promise(r => setTimeout(r, 800));
+
+            setReplayRange({ start, end });
+            toggleMode('REPLAY');
+            onClose();
+        } catch (e) {
+            console.error(e);
+            setHydrateStats("Hydration Failed");
+        } finally {
+            setHydrating(false);
+        }
     };
 
     // Quick Select from Major Events (Mock for now, or fetch from NASA)
@@ -171,10 +192,20 @@ export const ArchiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
 
                     <button
                         onClick={handleApply}
-                        className="w-full bg-space-blue hover:bg-blue-600 text-white font-bold py-3 rounded flex items-center justify-center gap-2 transition-colors"
+                        disabled={hydrating}
+                        className={`w-full font-bold py-3 rounded flex items-center justify-center gap-2 transition-all ${hydrating ? 'bg-slate-700 text-slate-400 cursor-wait' : 'bg-space-blue hover:bg-blue-600 text-white'}`}
                     >
-                        <Play size={16} fill="currentColor" />
-                        Load Historical Data
+                        {hydrating ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                {hydrateStats || "Hydrating..."}
+                            </>
+                        ) : (
+                            <>
+                                <Play size={16} fill="currentColor" />
+                                Load Historical Data
+                            </>
+                        )}
                     </button>
                 </div>
             </div>
