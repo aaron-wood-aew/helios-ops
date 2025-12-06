@@ -29,6 +29,26 @@ export interface SolarWindPlasma {
     temperature: number;
 }
 
+export interface SolarRegion {
+    observed_date: string;
+    region: number;
+    latitude: number;
+    longitude: number;
+    location: string;
+    area: number;
+    spot_class: string;
+    mag_class: string;
+    number_spots: number;
+    c_flare_probability: number;
+    m_flare_probability: number;
+    x_flare_probability: number;
+}
+
+export interface SolarImage {
+    url: string;
+    time: string; // ISO string
+}
+
 export interface SolarWindMag {
     time_tag: string;
     bz_gsm: number;
@@ -168,6 +188,11 @@ export const noaaApi = {
         const url = `${BACKEND_API}/history/dst?start=${start.toISOString()}&end=${end.toISOString()}`;
         const response = await axios.get<DstIndex[]>(url);
         return response.data;
+    },
+
+    async getSolarRegions(): Promise<SolarRegion[]> {
+        const response = await fetch("https://services.swpc.noaa.gov/json/solar_regions.json");
+        return response.json();
     },
 
     getHistoryImages: async (product: 'suvi' | 'lasco' | 'aurora', start: Date, end: Date, channel?: string) => {

@@ -3,6 +3,7 @@ import { Card } from '../layout/Card';
 import { ErrorBoundary } from '../layout/ErrorBoundary';
 import { SolarLoopWidget } from '../widgets/SolarLoopWidget';
 import { CoronagraphWidget } from '../widgets/CoronagraphWidget';
+import { SunspotWidget } from '../widgets/SunspotWidget';
 import { XRayFluxChart } from '../widgets/XRayFluxChart';
 import { KpIndexChart } from '../widgets/KpIndexChart';
 import { SolarWindChart } from '../widgets/SolarWindChart';
@@ -61,6 +62,11 @@ export const PhysicsLayout: React.FC = () => {
                 {/* Aurora Forecast */}
                 <Card className="h-[520px] p-0" title="Aurora Forecast" icon={<Map size={18} />} info={`NOAA OVATION Prime Model.\nForecasts the probability and intensity of visible aurora based on current Solar Wind conditions. Shows the auroral oval position relative to the viewing line.`}>
                     <ErrorBoundary name="Aurora"><AuroraWidget /></ErrorBoundary>
+                </Card>
+
+                {/* Sunspot Map */}
+                <Card className="h-[520px] p-4" title="Active Regions (Sunspots)" icon={<Activity size={18} />} info={`Active Region Monitor.\nMap of currently numbered Sunspots (Active Regions). Size indicates area, color indicates magnetic complexity (Red=Beta-Gamma-Delta risk).`}>
+                    <ErrorBoundary name="Sunspots"><SunspotWidget /></ErrorBoundary>
                 </Card>
             </div>
 
