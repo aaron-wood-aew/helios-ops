@@ -21,10 +21,12 @@ export const SolarLoopWidget: React.FC = () => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [loading, setLoading] = useState(false);
     const [progress, setProgress] = useState(0); // Loading progress
+    const [speed, setSpeed] = useState(1);
+    const [hours, setHours] = useState(24);
 
     // Cache for preloaded images
     const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
-    const intervalRef = useRef<number | undefined>(undefined);
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const loadImages = async () => {
         setLoading(true);
@@ -42,18 +44,19 @@ export const SolarLoopWidget: React.FC = () => {
                 urls = history.map(h => h.url);
             } else {
                 urls = await noaaApi.getSUVIImages(channel);
-                // Limit to last 100 frames to save bandwidth/memory for now (approx 8 hours)
-                urls = urls.slice(-100);
+                // Calculate frames needed: ~4 mins per frame = 15 frames/hour
+                // 48 hours = 720 frames.
+                const framesNeeded = hours * 15;
+                urls = urls.slice(-framesNeeded);
             }
 
             if (urls.length === 0) {
-                // Handle no data
                 setLoading(false);
                 return;
             }
 
             setImages(urls);
-            setCurrentIndex(mode === 'REPLAY' ? 0 : urls.length - 1); // Start at beginning for replay, end for live
+            setCurrentIndex(mode === 'REPLAY' ? 0 : urls.length - 1);
 
             // Preload images
             let loadedCount = 0;
@@ -68,14 +71,13 @@ export const SolarLoopWidget: React.FC = () => {
                         resolve();
                     };
                     img.onerror = () => {
-                        // Skip failed images
                         resolve();
                     };
                 });
             });
 
             await Promise.all(promises);
-            setIsPlaying(true); // Auto-play after load
+            setIsPlaying(true);
         } catch (err) {
             console.error("Failed to load solar loop", err);
         } finally {
@@ -86,26 +88,30 @@ export const SolarLoopWidget: React.FC = () => {
     useEffect(() => {
         loadImages();
         return () => stopAnimation();
-    }, [channel, mode, replayRange]);
+    }, [channel, mode, replayRange, hours]);
 
     const stopAnimation = () => {
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
-            intervalRef.current = undefined;
+            intervalRef.current = null;
         }
     };
 
     useEffect(() => {
         if (isPlaying && images.length > 0) {
             stopAnimation();
+            // Base speed: 100ms (10fps). 
+            // Multiplier: 2x -> 50ms, 5x -> 20ms
+            const delay = Math.max(20, Math.floor(100 / speed));
+
             intervalRef.current = setInterval(() => {
                 setCurrentIndex((prev) => (prev + 1) % images.length);
-            }, 100); // 10fps
+            }, delay);
         } else {
             stopAnimation();
         }
         return () => stopAnimation();
-    }, [isPlaying, images]);
+    }, [isPlaying, images, speed]);
 
     const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
         setIsPlaying(false);
@@ -113,12 +119,10 @@ export const SolarLoopWidget: React.FC = () => {
     };
 
     const currentUrl = images[currentIndex];
-    // Extract timestamp from filename: or_suvi-l2-ci195_g19_s20251205T235200Z...
     const getTimestamp = (url: string) => {
         if (!url) return "--:--";
         const match = url.match(/s(\d{8}T\d{6}Z)/);
         if (match) {
-            // Format: YYYYMMDDTHHMMSSZ -> Readable
             const ts = match[1];
             return `${ts.substring(0, 4)}-${ts.substring(4, 6)}-${ts.substring(6, 8)} ${ts.substring(9, 11)}:${ts.substring(11, 13)}`;
         }
@@ -139,7 +143,6 @@ export const SolarLoopWidget: React.FC = () => {
                     <div className="text-slate-500 font-mono text-xs">Waiting for data...</div>
                 )}
 
-                {/* Loading Overlay */}
                 {loading && (
                     <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10">
                         <div className="w-16 h-16 border-4 border-space-cyan border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -147,12 +150,10 @@ export const SolarLoopWidget: React.FC = () => {
                     </div>
                 )}
 
-                {/* Timestamp Overlay */}
                 <div className="absolute top-4 right-4 font-mono text-cyan-400 bg-black/50 px-2 py-1 rounded text-sm backdrop-blur-sm pointer-events-none">
                     {getTimestamp(currentUrl)}
                 </div>
 
-                {/* Channel Overlay (Top Left) */}
                 <div className="absolute top-4 left-4 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/60 p-2 rounded backdrop-blur-sm">
                     {CHANNELS.map(ch => (
                         <button
@@ -175,6 +176,20 @@ export const SolarLoopWidget: React.FC = () => {
                     {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
                 </button>
 
+                {/* Speed Toggle */}
+                <div className="flex gap-1">
+                    {[1, 2, 5].map(s => (
+                        <button
+                            key={s}
+                            onClick={() => setSpeed(s)}
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${speed === s ? 'bg-space-cyan text-black' : 'text-slate-500 hover:text-white bg-slate-800'}`}
+                            title={`Speed ${s}x`}
+                        >
+                            {s}x
+                        </button>
+                    ))}
+                </div>
+
                 <div className="flex-1 flex flex-col justify-center">
                     <input
                         type="range"
@@ -186,7 +201,12 @@ export const SolarLoopWidget: React.FC = () => {
                         className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-space-cyan"
                     />
                     <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
-                        <span>-8h</span>
+                        <button
+                            onClick={() => setHours(h => h === 24 ? 48 : 24)}
+                            className="hover:text-space-cyan transition-colors"
+                        >
+                            -{hours}h
+                        </button>
                         <span>LIVE</span>
                     </div>
                 </div>

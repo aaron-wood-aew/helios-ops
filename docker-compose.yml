@@ -16,11 +16,10 @@ services:
       - DB_PATH=/app/data/space_weather.db
     volumes:
       # Persist DB
-      - backend_data:/app/data
+      - ./backend/data:/app/data
       # Persist Images
       - backend_images:/app/images
     restart: unless-stopped
 
 volumes:
-  backend_data:
   backend_images:

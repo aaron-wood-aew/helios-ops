@@ -4,34 +4,34 @@ from sqlmodel import Field, SQLModel, create_engine, Session
 
 class XRayFlux(SQLModel, table=True):
     time_tag: datetime = Field(primary_key=True)
-    short_wave: float # 0.5-4.0 A
-    long_wave: float  # 1.0-8.0 A
+    short_wave: Optional[float] = Field(default=None) # 0.5-4.0 A
+    long_wave: Optional[float] = Field(default=None)  # 1.0-8.0 A
 
 class ProtonFlux(SQLModel, table=True):
     time_tag: datetime = Field(primary_key=True)
-    p10: float # >= 10 MeV
-    p100: float # >= 100 MeV
+    p10: Optional[float] = Field(default=None) # >= 10 MeV
+    p100: Optional[float] = Field(default=None) # >= 100 MeV
 
 class SolarWind(SQLModel, table=True):
     time_tag: datetime = Field(primary_key=True)
-    speed: float
-    density: float
-    temperature: float
-    bz: float
-    bt: float
+    speed: Optional[float] = Field(default=None)
+    density: Optional[float] = Field(default=None)
+    temperature: Optional[float] = Field(default=None)
+    bz: Optional[float] = Field(default=None)
+    bt: Optional[float] = Field(default=None)
 
 class KpIndex(SQLModel, table=True):
     time_tag: datetime = Field(primary_key=True)
-    kp_index: float
+    kp_index: Optional[float] = Field(default=None)
 
 class ElectronFlux(SQLModel, table=True):
     time_tag: datetime = Field(primary_key=True)
-    flux: float # > 2 MeV
-    energy: str # ">=2 MeV"
+    flux: Optional[float] = Field(default=None) # > 2 MeV
+    energy: Optional[str] = Field(default=None) # ">=2 MeV"
 
 class DstIndex(SQLModel, table=True):
     time_tag: datetime = Field(primary_key=True)
-    dst: float
+    dst: Optional[float] = Field(default=None)
 
 class ImageArchive(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
