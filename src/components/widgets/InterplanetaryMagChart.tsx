@@ -94,8 +94,8 @@ export const InterplanetaryMagChart: React.FC<InterplanetaryMagChartProps> = ({ 
                     />
                     <Legend wrapperStyle={{ fontSize: '10px' }} />
                     <ReferenceLine y={0} stroke="#94a3b8" strokeOpacity={0.5} />
-                    <Line type="monotone" dataKey="bt" name="Bt (Total)" stroke="#f8fafc" strokeWidth={1} dot={false} animationDuration={0} isAnimationActive={false} connectNulls />
-                    <Line type="monotone" dataKey="bz_gsm" name="Bz (North/South)" stroke="#ef4444" strokeWidth={2} dot={false} animationDuration={0} isAnimationActive={false} connectNulls />
+                    <Line type="monotone" dataKey="bt" name="Bt (Total)" stroke="#f8fafc" strokeWidth={1} dot={false} animationDuration={0} isAnimationActive={false} connectNulls={false} />
+                    <Line type="monotone" dataKey="bz_gsm" name="Bz (North/South)" stroke="#ef4444" strokeWidth={2} dot={false} animationDuration={0} isAnimationActive={false} connectNulls={false} />
                 </ComposedChart>
             </ResponsiveContainer>
         </div>

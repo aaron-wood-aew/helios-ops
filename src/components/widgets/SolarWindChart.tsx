@@ -118,8 +118,8 @@ export const SolarWindChart: React.FC<SolarWindChartProps> = ({ syncId, domain }
                     />
                     <Legend wrapperStyle={{ fontSize: '10px' }} />
 
-                    <Area yAxisId="left" type="monotone" dataKey="speed" name="Wind Speed" stroke="#0ea5e9" fill="#0ea5e9" fillOpacity={0.1} strokeWidth={2} animationDuration={0} isAnimationActive={false} connectNulls />
-                    <Line yAxisId="right" type="monotone" dataKey="bz" name="Bz (Mag)" stroke="#ef4444" dot={false} strokeWidth={2} animationDuration={0} isAnimationActive={false} connectNulls />
+                    <Area yAxisId="left" type="monotone" dataKey="speed" name="Wind Speed" stroke="#0ea5e9" fill="#0ea5e9" fillOpacity={0.1} strokeWidth={2} animationDuration={0} isAnimationActive={false} connectNulls={false} />
+                    <Line yAxisId="right" type="monotone" dataKey="bz" name="Bz (Mag)" stroke="#ef4444" dot={false} strokeWidth={2} animationDuration={0} isAnimationActive={false} connectNulls={false} />
                 </ComposedChart>
             </ResponsiveContainer>
         </div>
