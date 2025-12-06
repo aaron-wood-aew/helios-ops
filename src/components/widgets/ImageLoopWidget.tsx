@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RefreshCw } from 'lucide-react';
+import { AnimationControls } from './AnimationControls';
 
 interface ImageLoopProps {
     title?: string;
@@ -7,11 +7,19 @@ interface ImageLoopProps {
     loading?: boolean;
     onRefresh?: () => void;
     timestampExtractor?: (url: string) => string;
+    extraControls?: React.ReactNode;
 }
 
-export const ImageLoopWidget: React.FC<ImageLoopProps> = ({ images, loading, onRefresh, timestampExtractor }) => {
+export const ImageLoopWidget: React.FC<ImageLoopProps> = ({
+    images,
+    loading,
+    onRefresh,
+    timestampExtractor,
+    extraControls
+}) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [speed, setSpeed] = useState(1);
     const [progress, setProgress] = useState(0);
 
     const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
@@ -21,7 +29,7 @@ export const ImageLoopWidget: React.FC<ImageLoopProps> = ({ images, loading, onR
     useEffect(() => {
         if (images.length === 0) return;
         setIsPlaying(false);
-        setCurrentIndex(0);
+        setCurrentIndex(images.length - 1); // Start at latest
         setProgress(0);
         imageCache.current.clear();
 
@@ -33,10 +41,12 @@ export const ImageLoopWidget: React.FC<ImageLoopProps> = ({ images, loading, onR
                 loadedCount++;
                 setProgress(Math.round((loadedCount / images.length) * 100));
                 imageCache.current.set(url, img);
+                // Auto-play only after all loaded? Or partial?
+                // Let's verify standard behavior. Usually play once loaded.
                 if (loadedCount === images.length) setIsPlaying(true);
             };
             img.onerror = () => {
-                loadedCount++; // Count error as loaded to avoid stall
+                loadedCount++;
                 setProgress(Math.round((loadedCount / images.length) * 100));
             };
         });
@@ -52,19 +62,15 @@ export const ImageLoopWidget: React.FC<ImageLoopProps> = ({ images, loading, onR
     useEffect(() => {
         if (isPlaying && images.length > 0) {
             stopAnimation();
+            const delay = Math.max(20, Math.floor(100 / speed));
             intervalRef.current = window.setInterval(() => {
                 setCurrentIndex(prev => (prev + 1) % images.length);
-            }, 100);
+            }, delay);
         } else {
             stopAnimation();
         }
         return () => stopAnimation();
-    }, [isPlaying, images]);
-
-    const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setIsPlaying(false);
-        setCurrentIndex(parseInt(e.target.value));
-    };
+    }, [isPlaying, images, speed]);
 
     const currentUrl = images[currentIndex];
 
@@ -94,33 +100,18 @@ export const ImageLoopWidget: React.FC<ImageLoopProps> = ({ images, loading, onR
                 </div>
             </div>
 
-            {/* Controls */}
-            <div className="h-14 bg-slate-900/80 backdrop-blur border-t border-white/10 flex items-center px-4 gap-4">
-                <button
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-space-blue hover:bg-blue-500 text-white transition-colors"
-                >
-                    {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
-                </button>
-
-                <div className="flex-1">
-                    <input
-                        type="range"
-                        min="0"
-                        max={Math.max(0, images.length - 1)}
-                        value={currentIndex}
-                        onChange={handleScrub}
-                        disabled={images.length === 0}
-                        className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-space-cyan"
-                    />
-                </div>
-
-                {onRefresh && (
-                    <button onClick={onRefresh} className="text-slate-400 hover:text-white" title="Refresh">
-                        <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-                    </button>
-                )}
-            </div>
+            <AnimationControls
+                isPlaying={isPlaying}
+                onPlayPause={() => setIsPlaying(!isPlaying)}
+                currentIndex={currentIndex}
+                totalFrames={images.length}
+                onScrub={(i) => { setIsPlaying(false); setCurrentIndex(i); }}
+                speed={speed}
+                onSpeedChange={setSpeed}
+                onRefresh={onRefresh}
+                loading={loading}
+                extraControls={extraControls}
+            />
         </div>
     );
 };

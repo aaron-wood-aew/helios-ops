@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { noaaApi } from '../../api/noaa';
-import { Loader2, RefreshCcw, Play, Pause } from 'lucide-react';
+import { AnimationControls } from './AnimationControls';
+import { Loader2 } from 'lucide-react';
 import { useDashboard } from '../../context/DashboardContext';
 
 interface AuroraFrame {
@@ -14,6 +15,7 @@ export const AuroraWidget: React.FC = () => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
+    const [speed, setSpeed] = useState(1);
     const [hemisphere, setHemisphere] = useState<'north' | 'south'>('north');
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -65,19 +67,27 @@ export const AuroraWidget: React.FC = () => {
     // Animation Loop
     useEffect(() => {
         if (isPlaying && frames.length > 0) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            const delay = Math.max(20, Math.floor(100 / speed));
+
             timerRef.current = setInterval(() => {
                 setCurrentIndex(prev => (prev + 1) % frames.length);
-            }, 100); // 10fps
+            }, delay);
         } else if (timerRef.current) {
             clearInterval(timerRef.current);
         }
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [isPlaying, frames]);
+    }, [isPlaying, frames, speed]);
 
-    const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setIsPlaying(false);
-        setCurrentIndex(parseInt(e.target.value));
-    };
+    const extraControls = (
+        <button
+            onClick={() => setHemisphere(h => h === 'north' ? 'south' : 'north')}
+            className="px-2 py-1 text-[10px] font-bold bg-slate-800 rounded border border-slate-600 hover:bg-slate-700 uppercase w-8 text-center"
+            title="Toggle Hemisphere"
+        >
+            {hemisphere === 'north' ? 'N' : 'S'}
+        </button>
+    );
 
     return (
         <div className="relative w-full h-full bg-black rounded-lg overflow-hidden group flex flex-col">
@@ -105,41 +115,18 @@ export const AuroraWidget: React.FC = () => {
                 </div>
             </div>
 
-            {/* Controls Bar */}
-            <div className="h-10 bg-slate-900 border-t border-slate-700 flex items-center px-2 gap-2 z-10">
-                <button
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className="text-space-cyan hover:text-white p-1"
-                >
-                    {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-                </button>
-
-                <input
-                    type="range"
-                    min={0}
-                    max={frames.length - 1}
-                    value={currentIndex}
-                    onChange={handleScrub}
-                    className="flex-1 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-space-cyan [&::-webkit-slider-thumb]:rounded-full"
-                />
-
-                <div className="flex gap-1">
-                    <button
-                        onClick={() => setHemisphere(h => h === 'north' ? 'south' : 'north')}
-                        className="px-2 py-1 text-[10px] font-bold bg-slate-800 rounded border border-slate-600 hover:bg-slate-700 uppercase w-8 text-center"
-                        title="Toggle Hemisphere"
-                    >
-                        {hemisphere === 'north' ? 'N' : 'S'}
-                    </button>
-                    <button
-                        onClick={loadData}
-                        className="p-1 text-slate-400 hover:text-white"
-                        title="Refresh"
-                    >
-                        <RefreshCcw size={14} />
-                    </button>
-                </div>
-            </div>
+            <AnimationControls
+                isPlaying={isPlaying}
+                onPlayPause={() => setIsPlaying(!isPlaying)}
+                currentIndex={currentIndex}
+                totalFrames={frames.length}
+                onScrub={(i) => { setIsPlaying(false); setCurrentIndex(i); }}
+                speed={speed}
+                onSpeedChange={setSpeed}
+                onRefresh={loadData}
+                loading={loading}
+                extraControls={extraControls}
+            />
 
             <div className="absolute bottom-12 right-2 pointer-events-none opacity-50">
                 <div className="text-[10px] text-slate-300 text-right drop-shadow-md">NOAA OVATION Model</div>
