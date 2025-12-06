@@ -68,14 +68,9 @@ def ingest_kp_history():
 def fetch_links(base_url, pattern):
     try:
         resp = requests.get(base_url, timeout=30)
-        # Debugging
-        print(f"DEBUG: Fetching {base_url} -> Status {resp.status_code}")
-        # print(f"DEBUG: Content sample: {resp.text[:200]}")
-        matches = list(set(re.findall(pattern, resp.text)))
-        print(f"DEBUG: Found {len(matches)} matches with pattern {pattern}")
-        return sorted(matches)
+        return sorted(list(set(re.findall(pattern, resp.text))))
     except Exception as e:
-        print(f"DEBUG: Error fetching {base_url}: {e}")
+        logger.error(f"Error fetching {base_url}: {e}")
         return []
 
 def index_images(product, channel, url, regex):
@@ -86,9 +81,6 @@ def index_images(product, channel, url, regex):
     with Session(engine) as session:
         count = 0
         for filename in files:
-            # We DON'T download. We just create the record.
-            # Record needs a time_tag.
-            # Parse filename.
             try:
                 ts = datetime.now(timezone.utc) # fallback
                 if product == 'suvi':
@@ -97,8 +89,8 @@ def index_images(product, channel, url, regex):
                     if m: ts = datetime.strptime(m.group(1), "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
                 elif product == 'lasco':
                     # 20251206_171200_lasc2.png
-                    m = re.search(r'(\d{8}_\d{6})', filename)
-                    if m: ts = datetime.strptime(m.group(1), "%Y%m%d_%H%M%S").replace(tzinfo=timezone.utc)
+                    m = re.search(r'(\d{8}_\d{4})', filename)
+                    if m: ts = datetime.strptime(m.group(1), "%Y%m%d_%H%M").replace(tzinfo=timezone.utc)
                 elif product == 'aurora':
                     # aurora_N_2025-12-06_1720.jpg
                     m = re.search(r'(\d{4}-\d{2}-\d{2}_\d{2}\d{2})', filename)
@@ -108,13 +100,6 @@ def index_images(product, channel, url, regex):
                 rel_path = f"images/{product}/{filename}"
                 existing = session.query(ImageArchive).filter(ImageArchive.local_path == rel_path).first()
                 if not existing:
-                    # Mark as NOT downloaded (we need a flag? or just check file existence logic later)
-                    # For now, we assume if it's in DB, we know about it.
-                    # We can use a special "is_downloaded" flag if we update the model?
-                    # Or just rely on file system check.
-                    # Model doesn't have `is_downloaded`.
-                    # But `ImageArchive` has `local_path`.
-                    # We will store the path. The "Hydration" step will check if file exists.
                     ia = ImageArchive(
                         time_tag=ts,
                         product=product,
@@ -138,9 +123,10 @@ def run():
     
     # Image Indexing (Live Sources)
     # Regex: Look for filenames ending in .png or .jpg, specific to product
+    # Note: LASCO is .jpg on the server (e.g. 20251205_1800_c2_512.jpg)
     index_images("suvi", "195", URL_SUVI_195, r'or_suvi-l2-ci195[^"]+\.png')
-    index_images("lasco", "c2", URL_LASCO_C2, r'\d{8}_\d{6}_lasc2\.png')
-    index_images("lasco", "c3", URL_LASCO_C3, r'\d{8}_\d{6}_lasc3\.png')
+    index_images("lasco", "c2", URL_LASCO_C2, r'\d{8}_\d{4}_c2_512\.jpg') 
+    index_images("lasco", "c3", URL_LASCO_C3, r'\d{8}_\d{4}_c3_512\.jpg')
     index_images("aurora", "north", URL_AURORA_N, r'aurora_N_[^"]+\.jpg')
 
 if __name__ == "__main__":
