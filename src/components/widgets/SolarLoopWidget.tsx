@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RefreshCw } from 'lucide-react';
+import { Play, Pause, RefreshCw, Layers } from 'lucide-react';
 import { noaaApi } from '../../api/noaa';
 import { useDashboard } from '../../context/DashboardContext';
 
@@ -11,8 +11,6 @@ const CHANNELS = [
     { id: '304', color: 'text-red-400', label: '304Å (Filaments)' },
 ];
 
-
-
 export const SolarLoopWidget: React.FC = () => {
     const { mode, replayRange } = useDashboard();
     const [channel, setChannel] = useState('195');
@@ -23,6 +21,7 @@ export const SolarLoopWidget: React.FC = () => {
     const [progress, setProgress] = useState(0); // Loading progress
     const [speed, setSpeed] = useState(1);
     const [hours, setHours] = useState(24);
+    const [showMenu, setShowMenu] = useState(false);
 
     // Cache for preloaded images
     const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
@@ -153,18 +152,30 @@ export const SolarLoopWidget: React.FC = () => {
                 <div className="absolute top-4 right-4 font-mono text-cyan-400 bg-black/50 px-2 py-1 rounded text-sm backdrop-blur-sm pointer-events-none">
                     {getTimestamp(currentUrl)}
                 </div>
+                {/* Channel Overlay (Top Left) */}
+                {/* Toggle Button */}
+                <button
+                    onClick={() => setShowMenu(!showMenu)}
+                    className="absolute top-4 left-4 p-2 bg-black/60 hover:bg-black/80 rounded backdrop-blur-sm border border-white/10 z-20 transition-colors"
+                >
+                    <Layers size={16} className="text-space-cyan" />
+                </button>
 
-                <div className="absolute top-4 left-4 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/60 p-2 rounded backdrop-blur-sm">
-                    {CHANNELS.map(ch => (
-                        <button
-                            key={ch.id}
-                            onClick={() => setChannel(ch.id)}
-                            className={`text-[10px] uppercase font-bold px-2 py-1 rounded text-left hover:bg-white/10 ${channel === ch.id ? 'bg-white/20 text-white' : 'text-slate-400'}`}
-                        >
-                            <span className={`mr-2 ${ch.color}`}>●</span> {ch.label}
-                        </button>
-                    ))}
-                </div>
+                {/* Menu */}
+                {showMenu && (
+                    <div className="absolute top-14 left-4 flex flex-col gap-1 bg-black/80 p-2 rounded backdrop-blur-md border border-white/10 z-20 animate-in fade-in slide-in-from-top-2">
+                        {CHANNELS.map(ch => (
+                            <button
+                                key={ch.id}
+                                onClick={() => { setChannel(ch.id); setShowMenu(false); }}
+                                className={`text-[10px] uppercase font-bold px-3 py-2 rounded text-left flex items-center gap-2 transition-colors ${channel === ch.id ? 'bg-space-blue text-white shadow-lg' : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                            >
+                                <span className={`w-2 h-2 rounded-full ${ch.color.replace('text-', 'bg-')}`}></span>
+                                {ch.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Controls */}

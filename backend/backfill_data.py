@@ -142,11 +142,11 @@ def backfill():
             try:
                 t = parser.parse(x['time_tag'])
                 if t.tzinfo is None: t = t.replace(tzinfo=timezone.utc)
-                if t not in xray_map: xray_map[t] = {"time_tag": t, "flux_short": None, "flux_long": None}
+                if t not in xray_map: xray_map[t] = {"time_tag": t, "short_wave": None, "long_wave": None}
                 
                 val = safe_float(x.get('flux'))
-                if x.get('energy') == '0.05-0.4nm': xray_map[t]['flux_short'] = val
-                if x.get('energy') == '0.1-0.8nm': xray_map[t]['flux_long'] = val
+                if x.get('energy') == '0.05-0.4nm': xray_map[t]['short_wave'] = val
+                if x.get('energy') == '0.1-0.8nm': xray_map[t]['long_wave'] = val
             except: continue
             
         for item in xray_map.values():
