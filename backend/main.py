@@ -11,16 +11,24 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 # authentication imports
-from fastapi import FastAPI, Query, Depends, HTTPException, status
+from fastapi import FastAPI, Query, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from auth import create_access_token, get_current_active_user, get_current_admin_user, get_password_hash, verify_password, ACCESS_TOKEN_EXPIRE_MINUTES
 from database import User
 from datetime import timedelta
 
-# ... middleware code ...
+# Rate Limiting
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
-
+# Initialize Limiter
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 app = FastAPI(title="Helios.Ops Backend")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Ensure directory exists first or StaticFiles might complain if missing on startup
 if not os.path.exists("images"):
@@ -38,7 +46,8 @@ app.add_middleware(
 # Authentication Endpoints
 
 @app.post("/token")
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+@limiter.limit("5/minute")
+async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     with Session(engine) as session:
         user = session.exec(select(User).where(User.username == form_data.username)).first()
         if not user or not verify_password(form_data.password, user.hashed_password):
