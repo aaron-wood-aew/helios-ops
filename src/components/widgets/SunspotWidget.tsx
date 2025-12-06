@@ -80,7 +80,8 @@ export const SunspotWidget: React.FC = () => {
                     // Color based on Mag Class?
                     // Beta-Gamma-Delta (BGD) = Red/Danger.
                     // Alpha = Blue/Stable.
-                    const isComplex = r.mag_class.includes('D') || r.mag_class.includes('G');
+                    const mag = r.mag_class || '';
+                    const isComplex = mag.includes('D') || mag.includes('G');
                     const color = isComplex ? 'bg-red-500 border-red-200' : 'bg-slate-800 border-white';
 
                     return (
@@ -92,7 +93,7 @@ export const SunspotWidget: React.FC = () => {
                         >
                             {/* Label on hover */}
                             <div className="absolute top-full mt-1 bg-black/80 px-2 py-1 rounded text-[10px] whitespace-nowrap hidden group-hover:block z-20 border border-white/20">
-                                AR {r.region} ({r.mag_class})
+                                AR {r.region} ({r.mag_class || 'N/A'})
                             </div>
                         </div>
                     );
