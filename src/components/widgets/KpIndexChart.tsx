@@ -58,9 +58,8 @@ export const KpIndexChart: React.FC<KpIndexChartProps> = ({ syncId, domain }) =>
     const visibleData = React.useMemo(() => {
         if (!domain) return data;
         const [start, end] = domain;
-        // Kp is sparse. We want to hold values.
-        // Use a wider buffer to capture the "last known Kp" before the window starts
-        const buffer = 3 * 60 * 60 * 1000; // 3 hours
+        // Kp is sparse (3-hour). Use a wide buffer to ensure we capture the previous point for 'hold' logic.
+        const buffer = 24 * 60 * 60 * 1000; // 24 hours (was 3h, which caused cutoffs near boundary)
         const rawFiltered = data.filter(d => d.time >= start - buffer && d.time <= end + buffer);
 
         return ensureContinuousData(rawFiltered, start, end, 60000, 'hold');
@@ -78,7 +77,7 @@ export const KpIndexChart: React.FC<KpIndexChartProps> = ({ syncId, domain }) =>
                         type="number"
                         domain={domain || ['auto', 'auto']}
                         stroke="#94a3b8"
-                        tickFormatter={(t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        tickFormatter={(t) => new Date(t).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }) + 'Z'}
                         tick={{ fontSize: 9 }}
                         minTickGap={30}
                         allowDataOverflow={true}
@@ -87,7 +86,8 @@ export const KpIndexChart: React.FC<KpIndexChartProps> = ({ syncId, domain }) =>
                     <Tooltip
                         cursor={{ fill: '#1e293b', opacity: 0.5 }}
                         contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }}
-                        labelFormatter={(t) => new Date(t).toLocaleString()}
+                        itemStyle={{ color: '#e2e8f0' }}
+                        labelFormatter={(t) => new Date(t).toLocaleString('en-US', { timeZone: 'UTC', month: '2-digit', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) + ' UTC'}
                         animationDuration={0}
                     />
                     <Bar dataKey="kp_index" name="Kp Index" animationDuration={0} isAnimationActive={false}>

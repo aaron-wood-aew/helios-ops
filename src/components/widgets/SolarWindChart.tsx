@@ -5,10 +5,11 @@ import { useDashboard } from '../../context/DashboardContext';
 import { Loader2 } from 'lucide-react';
 import { ensureContinuousData } from '../../lib/chartUtils';
 
-interface CombinedData {
-    time: number; // Changed to number
+interface SolarWindData {
+    time: number;
     speed: number | null;
-    bz: number | null;
+    density: number | null;
+    temperature: number | null;
 }
 
 interface SolarWindChartProps {
@@ -17,7 +18,7 @@ interface SolarWindChartProps {
 }
 
 export const SolarWindChart: React.FC<SolarWindChartProps> = ({ syncId, domain }) => {
-    const [data, setData] = useState<CombinedData[]>([]);
+    const [data, setData] = useState<SolarWindData[]>([]);
     const [loading, setLoading] = useState(true);
     const { mode, replayRange } = useDashboard();
 
@@ -25,7 +26,7 @@ export const SolarWindChart: React.FC<SolarWindChartProps> = ({ syncId, domain }
         const fetchData = async () => {
             setLoading(true);
             try {
-                let sorted: CombinedData[] = [];
+                let sorted: SolarWindData[] = [];
                 if (mode === 'REPLAY') {
                     const result = await noaaApi.getHistoryWind(replayRange.start, replayRange.end);
                     sorted = result.map(r => ({
@@ -101,7 +102,7 @@ export const SolarWindChart: React.FC<SolarWindChartProps> = ({ syncId, domain }
                         type="number"
                         domain={domain || ['auto', 'auto']}
                         stroke="#94a3b8"
-                        tickFormatter={(t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        tickFormatter={(t) => new Date(t).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }) + 'Z'}
                         tick={{ fontSize: 9 }}
                         minTickGap={30}
                         allowDataOverflow={true}
@@ -115,7 +116,7 @@ export const SolarWindChart: React.FC<SolarWindChartProps> = ({ syncId, domain }
 
                     <Tooltip
                         contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }}
-                        labelFormatter={(t) => new Date(t).toLocaleString()}
+                        labelFormatter={(t) => new Date(t).toLocaleString('en-US', { timeZone: 'UTC', month: '2-digit', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) + ' UTC'}
                         animationDuration={0} // Remove animation for snappiness
                     />
                     <Legend wrapperStyle={{ fontSize: '10px' }} />

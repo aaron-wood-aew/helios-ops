@@ -24,6 +24,15 @@ class KpIndex(SQLModel, table=True):
     time_tag: datetime = Field(primary_key=True)
     kp_index: float
 
+class ElectronFlux(SQLModel, table=True):
+    time_tag: datetime = Field(primary_key=True)
+    flux: float # > 2 MeV
+    energy: str # ">=2 MeV"
+
+class DstIndex(SQLModel, table=True):
+    time_tag: datetime = Field(primary_key=True)
+    dst: float
+
 # Database Setup
 sqlite_file_name = "space_weather.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"

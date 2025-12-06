@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import select, Session
-from database import create_db_and_tables, engine, XRayFlux, ProtonFlux, SolarWind, KpIndex
+from database import create_db_and_tables, engine, XRayFlux, ProtonFlux, SolarWind, KpIndex, ElectronFlux, DstIndex
 from scheduler import start_scheduler
 from datetime import datetime
 from contextlib import asynccontextmanager
@@ -51,6 +51,52 @@ def get_kp_history(start: datetime, end: datetime):
         statement = select(KpIndex).where(KpIndex.time_tag >= start, KpIndex.time_tag <= end).order_by(KpIndex.time_tag)
         results = session.exec(statement).all()
         return results
+
+@app.get("/history/electron")
+def get_electron_history(start: datetime, end: datetime):
+    with Session(engine) as session:
+        statement = select(ElectronFlux).where(ElectronFlux.time_tag >= start, ElectronFlux.time_tag <= end).order_by(ElectronFlux.time_tag)
+        results = session.exec(statement).all()
+        return results
+
+@app.get("/history/dst")
+def get_dst_history(start: datetime, end: datetime):
+    with Session(engine) as session:
+        statement = select(DstIndex).where(DstIndex.time_tag >= start, DstIndex.time_tag <= end).order_by(DstIndex.time_tag)
+        results = session.exec(statement).all()
+        return results
+
+@app.get("/api/status")
+def get_archive_status():
+    from sqlalchemy import func
+    stats = {}
+    models = {
+        "xray": XRayFlux,
+        "proton": ProtonFlux,
+        "solar_wind": SolarWind,
+        "kp": KpIndex,
+        "electron": ElectronFlux,
+        "dst": DstIndex
+    }
+    
+    with Session(engine) as session:
+        for name, model in models.items():
+            try:
+                # Get Count
+                count = session.exec(select(func.count()).select_from(model)).one()
+                # Get Min/Max
+                min_time = session.exec(select(func.min(model.time_tag))).one()
+                max_time = session.exec(select(func.max(model.time_tag))).one()
+                
+                stats[name] = {
+                    "count": count,
+                    "start": min_time,
+                    "end": max_time
+                }
+            except Exception as e:
+                stats[name] = {"error": str(e)}
+                
+    return stats
 
 @app.get("/api/suvi/{channel}")
 def get_suvi_images(channel: str):

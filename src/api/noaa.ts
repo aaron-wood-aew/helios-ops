@@ -35,15 +35,46 @@ export interface SolarWindMag {
     bt: number;
 }
 
+export interface ElectronFlux {
+    time_tag: string;
+    flux: number;
+    energy: string;
+    satellite: number;
+}
+
+export interface DstIndex {
+    time_tag: string;
+    dst: number;
+}
+
 export const noaaApi = {
     getProtonFlux: async () => {
         const response = await axios.get<ProtonFlux[]>(`${BASE_URL}/goes/primary/integral-protons-1-day.json`);
         return response.data;
     },
 
+    getElectronFlux: async () => {
+        const response = await axios.get<ElectronFlux[]>(`${BASE_URL}/goes/primary/integral-electrons-1-day.json`);
+        return response.data;
+    },
+
     getXRayFlux: async () => {
         const response = await axios.get<XRayFlux[]>(`${BASE_URL}/goes/primary/xrays-1-day.json`);
         return response.data;
+    },
+
+    getDstIndex: async () => {
+        // Source: https://services.swpc.noaa.gov/products/kyoto-dst.json
+        // Format: [["time_tag","dst"],["2025-11-29 02:00:00","-16"],...]
+        const response = await axios.get<any[]>('https://services.swpc.noaa.gov/products/kyoto-dst.json');
+        const data = response.data;
+        // Skip header row
+        const rows = data.slice(1);
+
+        return rows.map((row: any[]) => ({
+            time_tag: row[0],
+            dst: parseInt(row[1], 10)
+        })) as DstIndex[];
     },
 
     getKpIndex: async () => {
@@ -122,6 +153,30 @@ export const noaaApi = {
         return response.data;
     },
 
+    getHistoryElectron: async (start: Date, end: Date) => {
+        const s = start.toISOString();
+        const e = end.toISOString();
+        const response = await axios.get<ElectronFlux[]>(`http://localhost:8000/history/electron?start=${s}&end=${e}`);
+        return response.data;
+    },
+
+    getHistoryDst: async (start: Date, end: Date) => {
+        const s = start.toISOString();
+        const e = end.toISOString();
+        const response = await axios.get<DstIndex[]>(`http://localhost:8000/history/dst?start=${s}&end=${e}`);
+        return response.data;
+    },
+
+    getArchiveStatus: async () => {
+        interface TableStats {
+            count: number;
+            start: string | null;
+            end: string | null;
+        }
+        const response = await axios.get<Record<string, TableStats>>(`http://localhost:8000/api/status`);
+        return response.data;
+    },
+
     getAlerts: async () => {
         // Returns array of alerts. We usually only want the active ones or last few.
         // The JSON is a flat list of objects.
@@ -139,5 +194,19 @@ export const noaaApi = {
         const response = await axios.get<{ url: string }[]>(`https://services.swpc.noaa.gov/products/animations/lasco-${type}.json`);
         // URLs are relative to domain root, need to prepend
         return response.data.map(item => `https://services.swpc.noaa.gov${item.url}`);
-    }
+    },
+
+    getAuroraImage: (hemisphere: 'north' | 'south') => {
+        return `https://services.swpc.noaa.gov/images/aurora-forecast-${hemisphere}ern-hemisphere.jpg?t=${Date.now()}`;
+    },
+
+    getAuroraAnimation: async (hemisphere: 'north' | 'south') => {
+        const response = await axios.get<{ url: string; time_tag: string }[]>(
+            `https://services.swpc.noaa.gov/products/animations/ovation_${hemisphere}_24h.json`
+        );
+        return response.data.map(item => ({
+            url: `https://services.swpc.noaa.gov${item.url}`,
+            time_tag: item.time_tag
+        }));
+    },
 };

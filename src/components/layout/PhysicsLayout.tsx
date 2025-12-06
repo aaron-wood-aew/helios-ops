@@ -7,7 +7,11 @@ import { XRayFluxChart } from '../widgets/XRayFluxChart';
 import { KpIndexChart } from '../widgets/KpIndexChart';
 import { SolarWindChart } from '../widgets/SolarWindChart';
 import { ProtonFluxChart } from '../widgets/ProtonFluxChart';
-import { Disc, PlayCircle, Activity, Wind, Satellite, BarChart3, Radio, Clock } from 'lucide-react';
+import { DstIndexChart } from '../widgets/DstIndexChart';
+import { ElectronFluxChart } from '../widgets/ElectronFluxChart';
+import { InterplanetaryMagChart } from '../widgets/InterplanetaryMagChart';
+import { AuroraWidget } from '../widgets/AuroraWidget';
+import { Disc, PlayCircle, Activity, Wind, Satellite, BarChart3, Radio, Clock, Map } from 'lucide-react';
 
 type TimeRange = 2 | 4 | 6 | 12 | 24;
 
@@ -53,12 +57,18 @@ export const PhysicsLayout: React.FC = () => {
                 <Card className="min-h-[350px]" title="SOHO LASCO Coronagraphs" icon={<Disc size={18} />} info="Coronagraphs block the sun's disk to reveal the faint corona and CMEs.">
                     <ErrorBoundary name="Coronagraph"><CoronagraphWidget /></ErrorBoundary>
                 </Card>
+
+                {/* Aurora Forecast */}
+                <Card className="min-h-[300px]" title="Aurora Forecast" icon={<Map size={18} />} info="OVATION Aurora Model (30-min Forecast)">
+                    <ErrorBoundary name="Aurora"><AuroraWidget /></ErrorBoundary>
+                </Card>
             </div>
 
             {/* RIGHT COLUMN: STRIP CHART STACK (66%) */}
             <div className="col-span-1 md:col-span-2 lg:col-span-4 flex flex-col gap-4">
 
-                {/* Stack of Strip Charts - Reduced Height for Density */}
+                {/* Stack of Strip Charts - 3 Column Grid for Bottom Row */}
+
                 <Card className="min-h-[180px]" title="X-Ray Flux (Strip)" icon={<Activity size={18} />} info="Solar X-Ray Flux">
                     <ErrorBoundary name="XRay"><XRayFluxChart syncId="physics" domain={domain} /></ErrorBoundary>
                 </Card>
@@ -67,19 +77,24 @@ export const PhysicsLayout: React.FC = () => {
                     <ErrorBoundary name="Proton"><ProtonFluxChart syncId="physics" domain={domain} /></ErrorBoundary>
                 </Card>
 
+                <Card className="min-h-[180px]" title="Electron Flux (Strip)" icon={<Satellite size={18} />} info="Electron Flux (>2 MeV)">
+                    <ErrorBoundary name="Electron"><ElectronFluxChart syncId="physics" domain={domain} /></ErrorBoundary>
+                </Card>
+
                 <Card className="min-h-[180px]" title="Solar Wind Plasma" icon={<Wind size={18} />} info="Solar Wind Speed & Density">
                     <ErrorBoundary name="Solar Wind"><SolarWindChart syncId="physics" domain={domain} /></ErrorBoundary>
+                </Card>
+
+                <Card className="min-h-[180px]" title="Interplanetary Mag Field (IMF)" icon={<Activity size={18} />} info="Bz (Vertical) & Bt (Total)">
+                    <ErrorBoundary name="IMF"><InterplanetaryMagChart syncId="physics" domain={domain} /></ErrorBoundary>
                 </Card>
 
                 <Card className="min-h-[180px]" title="Planetary K-Index" icon={<BarChart3 size={18} />} info="Geomagnetic Storm Index">
                     <ErrorBoundary name="Kp"><KpIndexChart syncId="physics" domain={domain} /></ErrorBoundary>
                 </Card>
 
-                {/* Future: Dst Index, Radio Bursts, Magnetometers */}
-                <Card className="min-h-[180px] border-dashed border-white/10" title="Magnetometer Stack (Future)" icon={<Radio size={18} />} info="Placeholder for Dst / Mag data">
-                    <div className="h-full flex items-center justify-center text-slate-600 font-mono text-xs">
-                        WAITING FOR SIGNAL [Dst / Mag]
-                    </div>
+                <Card className="min-h-[180px]" title="Dst Index" icon={<Activity size={18} />} info="Disturbance Storm Time Index">
+                    <ErrorBoundary name="Dst"><DstIndexChart syncId="physics" domain={domain} /></ErrorBoundary>
                 </Card>
             </div>
         </React.Fragment>

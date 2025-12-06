@@ -90,7 +90,7 @@ export const ProtonFluxChart: React.FC<ProtonFluxChartProps> = ({ syncId, domain
                         type="number"
                         domain={domain || ['auto', 'auto']}
                         stroke="#94a3b8"
-                        tickFormatter={(t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        tickFormatter={(t) => new Date(t).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }) + 'Z'}
                         tick={{ fontSize: 10 }}
                         allowDataOverflow={true}
                     />
@@ -98,7 +98,7 @@ export const ProtonFluxChart: React.FC<ProtonFluxChartProps> = ({ syncId, domain
                     <Tooltip
                         contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }}
                         itemStyle={{ color: '#e2e8f0' }}
-                        labelFormatter={(t) => new Date(t).toLocaleString()}
+                        labelFormatter={(t) => new Date(t).toLocaleString('en-US', { timeZone: 'UTC', month: '2-digit', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) + ' UTC'}
                         animationDuration={0}
                     />
                     <Legend />

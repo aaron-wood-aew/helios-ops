@@ -32,12 +32,12 @@ const DashboardContent = () => {
 
       <DashboardLayout>
         {/* Header / Title */}
-        <div className="col-span-full mb-4 flex justify-between items-end border-b border-white/10 pb-4">
+        <div className="col-span-full mb-1 flex justify-between items-end border-b border-white/10 pb-2">
           <div>
-            <h1 className="text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase">
+            <h1 className="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase">
               Helios<span className="text-space-blue">.Ops</span>
             </h1>
-            <p className="text-slate-400 font-mono text-xs tracking-widest mt-1">SPACE WEATHER SITUATIONAL AWARENESS</p>
+            <p className="text-slate-400 font-mono text-[10px] tracking-widest">SPACE WEATHER SITUATIONAL AWARENESS</p>
           </div>
 
           <div className="flex gap-4 items-center">
