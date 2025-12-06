@@ -47,7 +47,7 @@ export interface DstIndex {
     dst: number;
 }
 
-const BACKEND_API = 'http://localhost:8000';
+const BACKEND_API = import.meta.env.PROD ? '' : 'http://localhost:8000';
 
 export const noaaApi = {
     getProtonFlux: async () => {
@@ -129,21 +129,21 @@ export const noaaApi = {
     getHistoryXRay: async (start: Date, end: Date) => {
         const s = start.toISOString();
         const e = end.toISOString();
-        const response = await axios.get<XRayFlux[]>(`http://localhost:8000/history/xray?start=${s}&end=${e}`);
+        const response = await axios.get<XRayFlux[]>(`${BACKEND_API}/history/xray?start=${s}&end=${e}`);
         return response.data;
     },
 
     getHistoryProton: async (start: Date, end: Date) => {
         const s = start.toISOString();
         const e = end.toISOString();
-        const response = await axios.get<ProtonFlux[]>(`http://localhost:8000/history/proton?start=${s}&end=${e}`);
+        const response = await axios.get<ProtonFlux[]>(`${BACKEND_API}/history/proton?start=${s}&end=${e}`);
         return response.data;
     },
 
     getHistoryWind: async (start: Date, end: Date) => {
         const s = start.toISOString();
         const e = end.toISOString();
-        const response = await axios.get<any[]>(`http://localhost:8000/history/wind?start=${s}&end=${e}`);
+        const response = await axios.get<any[]>(`${BACKEND_API}/history/wind?start=${s}&end=${e}`);
         // Backend returns {time_tag, speed, density, bz...} already formatted
         return response.data;
     },
@@ -151,7 +151,7 @@ export const noaaApi = {
     getHistoryKp: async (start: Date, end: Date) => {
         const s = start.toISOString();
         const e = end.toISOString();
-        const response = await axios.get<KpIndex[]>(`http://localhost:8000/history/kp?start=${s}&end=${e}`);
+        const response = await axios.get<KpIndex[]>(`${BACKEND_API}/history/kp?start=${s}&end=${e}`);
         return response.data;
     },
 
@@ -190,7 +190,7 @@ export const noaaApi = {
     },
 
     getSUVIImages: async (channel: string) => {
-        const response = await axios.get<{ images: string[] }>(`http://localhost:8000/api/suvi/${channel}`);
+        const response = await axios.get<{ images: string[] }>(`${BACKEND_API}/api/suvi/${channel}`);
         return response.data.images;
     },
 
