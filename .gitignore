@@ -31,3 +31,10 @@ __pycache__/
 backend/images/
 backend/venv/
 .env
+
+# SQLite temp files
+*.db-shm
+*.db-wal
+
+# Large data catalogs
+catalog.json
