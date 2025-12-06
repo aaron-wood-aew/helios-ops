@@ -98,7 +98,7 @@ export const DstIndexChart: React.FC<DstIndexChartProps> = ({ syncId, domain }) 
                     />
                     <ReferenceLine y={-50} stroke="#facc15" strokeDasharray="3 3" label={{ value: 'Storm', fill: '#facc15', fontSize: 9 }} />
                     <ReferenceLine y={-100} stroke="#f87171" strokeDasharray="3 3" label={{ value: 'Severe', fill: '#f87171', fontSize: 9 }} />
-                    <Line type="monotone" dataKey="dst" stroke="#c084fc" strokeWidth={2} dot={{ r: 2 }} animationDuration={0} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="dst" stroke="#c084fc" strokeWidth={2} dot={false} animationDuration={0} isAnimationActive={false} />
                 </LineChart>
             </ResponsiveContainer>
         </div>

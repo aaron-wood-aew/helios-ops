@@ -38,7 +38,7 @@ export const Card: React.FC<CardProps> = ({ children, className, title, icon, in
                     )}
                 </div>
             )}
-            <div className="p-4 flex-1 relative">
+            <div className={`flex-1 relative ${className?.includes('p-0') ? '' : 'p-4'} flex flex-col`}>
                 {children}
             </div>
         </div>

@@ -92,7 +92,7 @@ export const ElectronFluxChart: React.FC<ElectronFluxChartProps> = ({ syncId, do
                     />
                     {/* Alert Threshold: 1000 pfu is moderate, 10000 is high */}
                     <ReferenceLine y={1000} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Event', fill: '#ef4444', fontSize: 9 }} />
-                    <Line type="monotone" dataKey="flux" name=">2 MeV Flux" stroke="#fbbf24" strokeWidth={2} dot={false} animationDuration={0} isAnimationActive={false} connectNulls />
+                    <Line type="monotone" dataKey="flux" name="Electron Flux" stroke="#facc15" strokeWidth={2} dot={false} animationDuration={0} isAnimationActive={false} connectNulls />
                 </LineChart>
             </ResponsiveContainer>
         </div>
