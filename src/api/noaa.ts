@@ -214,4 +214,22 @@ export const noaaApi = {
             time_tag: item.time_tag
         }));
     },
+
+    login: async (username: string, password: string) => {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('password', password);
+
+        const response = await axios.post<{ access_token: string; token_type: string }>(
+            `${BACKEND_API}/token`,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+        return response.data;
+    },
+
+    getSystemStatus: async () => {
+        const response = await axios.get<{ status: string; user: string }>(`${BACKEND_API}/api/admin/system-status`);
+        return response.data;
+    },
 };

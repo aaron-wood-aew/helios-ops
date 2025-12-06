@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ErrorBoundary } from './components/layout/ErrorBoundary';
 import { AlertTicker } from './components/widgets/AlertTicker';
@@ -7,6 +8,8 @@ import { PhysicsLayout } from './components/layout/PhysicsLayout';
 import { Archive, History, XCircle, LayoutGrid, Activity } from 'lucide-react';
 import { DashboardProvider, useDashboard } from './context/DashboardContext';
 import { ArchiveModal } from './components/layout/ArchiveModal';
+import { AuthProvider } from './context/AuthContext';
+import { LoginPage } from './pages/LoginPage';
 
 const DashboardContent = () => {
   const { mode, toggleMode, viewMode, setViewMode, replayRange } = useDashboard();
@@ -82,12 +85,22 @@ const DashboardContent = () => {
   );
 };
 
+
+// ... existing imports ...
+
 function App() {
   return (
     <ErrorBoundary name="App Root (Top Level)">
-      <DashboardProvider>
-        <DashboardContent />
-      </DashboardProvider>
+      <AuthProvider>
+        <DashboardProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/" element={<DashboardContent />} />
+            </Routes>
+          </Router>
+        </DashboardProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

@@ -1,14 +1,26 @@
 import React, { useState } from 'react';
 import { useDashboard } from '../../context/DashboardContext';
-import { X, Calendar, Play } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { X, Calendar, Play, ShieldCheck, Activity } from 'lucide-react';
 
 export const ArchiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const { setReplayRange, toggleMode } = useDashboard();
+    const { isAuthenticated } = useAuth();
     const [startStr, setStartStr] = useState("2025-06-01T10:00");
     const [endStr, setEndStr] = useState("2025-06-02T10:00");
     const [status, setStatus] = useState<any>(null);
+    const [sysStatus, setSysStatus] = useState<any>(null);
     const [loadingStatus, setLoadingStatus] = useState(false);
     const [isStatusExpanded, setIsStatusExpanded] = useState(false);
+
+    React.useEffect(() => {
+        // Fetch Admin System Status if logged in
+        if (isAuthenticated) {
+            import('../../api/noaa').then(({ noaaApi }) => {
+                noaaApi.getSystemStatus().then(setSysStatus).catch(console.error);
+            });
+        }
+    }, [isAuthenticated]);
 
     React.useEffect(() => {
         if (isStatusExpanded && !status) {
@@ -62,6 +74,25 @@ export const ArchiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
                 </div>
 
                 <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
+
+                    {isAuthenticated && sysStatus && (
+                        <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-500/20 rounded-full">
+                                    <ShieldCheck className="text-blue-400" size={16} />
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-bold text-blue-200 uppercase tracking-wider">Admin Connected</h4>
+                                    <p className="text-[10px] text-blue-300/70 font-mono">User: {sysStatus.user}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-mono text-green-400">
+                                <Activity size={12} />
+                                {sysStatus.status.toUpperCase()}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Archive Inventory (Expandable) */}
                     <div className="border border-slate-700 rounded-lg overflow-hidden">
                         <button
