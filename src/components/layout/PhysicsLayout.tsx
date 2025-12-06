@@ -49,17 +49,17 @@ export const PhysicsLayout: React.FC = () => {
             <div className="col-span-1 md:col-span-2 lg:col-span-2 flex flex-col gap-4">
 
                 {/* Solar Loop */}
-                <Card className="h-[480px] p-0" title="Solar Dynamics Loop" icon={<PlayCircle size={18} />} info={`Solar Ultraviolet Imager (SUVI) on GOES-R. \nMonitors 6 coronal channels (94Å-304Å) to detect flares, coronal holes, and filaments at temperatures up to 10MK.`}>
+                <Card className="h-[520px] p-0" title="Solar Dynamics Loop" icon={<PlayCircle size={18} />} info={`Solar Ultraviolet Imager (SUVI) on GOES-R. \nMonitors 6 coronal channels (94Å-304Å) to detect flares, coronal holes, and filaments at temperatures up to 10MK.`}>
                     <ErrorBoundary name="Solar Loop"><SolarLoopWidget /></ErrorBoundary>
                 </Card>
 
                 {/* Coronagraphs */}
-                <Card className="h-[400px] p-0" title="SOHO LASCO Coronagraphs" icon={<Disc size={18} />} info={`Large Angle Spectrometric Coronagraph (LASCO C2/C3).\nOccults the solar disk to reveal the faint outer corona. Primary tool for detecting Earth-directed Coronal Mass Ejections (CMEs).`}>
+                <Card className="h-[520px] p-0" title="SOHO LASCO Coronagraphs" icon={<Disc size={18} />} info={`Large Angle Spectrometric Coronagraph (LASCO C2/C3).\nOccults the solar disk to reveal the faint outer corona. Primary tool for detecting Earth-directed Coronal Mass Ejections (CMEs).`}>
                     <ErrorBoundary name="Coronagraph"><CoronagraphWidget /></ErrorBoundary>
                 </Card>
 
                 {/* Aurora Forecast */}
-                <Card className="h-[350px] p-0" title="Aurora Forecast" icon={<Map size={18} />} info={`NOAA OVATION Prime Model.\nForecasts the probability and intensity of visible aurora based on current Solar Wind conditions. Shows the auroral oval position relative to the viewing line.`}>
+                <Card className="h-[520px] p-0" title="Aurora Forecast" icon={<Map size={18} />} info={`NOAA OVATION Prime Model.\nForecasts the probability and intensity of visible aurora based on current Solar Wind conditions. Shows the auroral oval position relative to the viewing line.`}>
                     <ErrorBoundary name="Aurora"><AuroraWidget /></ErrorBoundary>
                 </Card>
             </div>
