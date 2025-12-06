@@ -183,36 +183,51 @@ def download_file(url, local_path):
 
 # ... existing ingest functions ...
 
+
 def ingest_suvi():
     channels = ["131", "171", "195", "284", "304", "094"]
     base_storage = os.path.join(IMAGE_DIR, "suvi")
     ensure_dir(base_storage)
     
-    with Session(engine) as session:
-        for ch in channels:
-            try:
-                url = f"{URL_SUVI_BASE}{ch}/"
-                resp = requests.get(url, timeout=10)
-                # Regex for: or_suvi-l2-ci195_g19_s20251206T035200Z_e20251206T035600Z_v1-0-2.png
-                matches = re.findall(r'href="(or_suvi-l2-ci\d+_g\d+_s(\d{8}T\d{6}Z)_.*?\.png)"', resp.text)
+    for ch in channels:
+        try:
+            url = f"{URL_SUVI_BASE}{ch}/"
+            resp = requests.get(url, timeout=10)
+            matches = re.findall(r'href="(or_suvi-l2-ci\d+_g\d+_s(\d{8}T\d{6}Z)_.*?\.png)"', resp.text)
+            
+            # 1. Identify what we need
+            candidates = []
+            for filename, t_str in matches:
+                dt = datetime.strptime(t_str, "%Y%m%dT%H%M%SZ")
+                candidates.append((filename, dt))
+            
+            if not candidates: continue
+
+            # 2. Check DB for what we validly have
+            with Session(engine) as session:
+                stmt = select(ImageArchive.local_path).where(
+                    ImageArchive.product == "suvi", 
+                    ImageArchive.channel == ch
+                )
+                existing_paths = set(session.exec(stmt).all())
+            
+            # 3. Download missing files (No DB Transaction)
+            to_insert = []
+            for filename, dt in candidates:
+                local_path = os.path.join(base_storage, filename)
                 
-                for filename, t_str in matches:
-                    # Parse Time: 20251206T035200Z
-                    dt = datetime.strptime(t_str, "%Y%m%dT%H%M%SZ")
-                    
-                    # Check DB
-                    stmt = select(ImageArchive).where(
-                        ImageArchive.time_tag == dt, 
-                        ImageArchive.product == "suvi", 
-                        ImageArchive.channel == ch
-                    )
-                    existing = session.exec(stmt).first()
-                    
-                    if not existing:
-                        file_url = url + filename
-                        local_path = os.path.join(base_storage, filename)
-                        
-                        if download_file(file_url, local_path):
+                # If we don't have it in DB, download (or verify file)
+                if local_path not in existing_paths:
+                    file_url = url + filename
+                    if download_file(file_url, local_path):
+                        to_insert.append((dt, local_path))
+            
+            # 4. Bulk Insert (Short DB Transaction)
+            if to_insert:
+                with Session(engine) as session:
+                    for dt, local_path in to_insert:
+                        # Double check to prevent race condition uniqueness error
+                        if not session.exec(select(ImageArchive).where(ImageArchive.local_path == local_path)).first():
                             entry = ImageArchive(
                                 time_tag=dt,
                                 product="suvi",
@@ -220,81 +235,100 @@ def ingest_suvi():
                                 local_path=local_path
                             )
                             session.add(entry)
-            except Exception as e:
-                print(f"SUVI {ch} Ingest Fail: {e}")
-        session.commit()
+                    session.commit()
+                    
+        except Exception as e:
+            print(f"SUVI {ch} Ingest Fail: {e}")
 
 def ingest_lasco():
     products = [("c2", URL_LASCO_C2), ("c3", URL_LASCO_C3)]
     base_storage = os.path.join(IMAGE_DIR, "lasco")
     ensure_dir(base_storage)
 
-    with Session(engine) as session:
-        for name, url in products:
-            try:
-                data = requests.get(url, timeout=10).json()
-                for row in data:
-                    rel_url = row['url'] # /images/animations/lasco-c2/20251205_0417_c2_512.jpg
-                    filename = rel_url.split('/')[-1]
-                    
-                    # Parse Time: 20251205_0417
-                    # Regex to extract date_time part
-                    match = re.search(r'(\d{8}_\d{4})', filename)
-                    if match:
-                        t_str = match.group(1)
-                        dt = datetime.strptime(t_str, "%Y%m%d_%H%M")
-                        
-                        stmt = select(ImageArchive).where(
-                            ImageArchive.time_tag == dt,
-                            ImageArchive.product == "lasco",
-                            ImageArchive.channel == name
-                        )
-                        existing = session.exec(stmt).first()
-                        
-                        if not existing:
-                            full_url = "https://services.swpc.noaa.gov" + rel_url
-                            local_path = os.path.join(base_storage, filename)
-                            
-                            if download_file(full_url, local_path):
-                                entry = ImageArchive(
-                                    time_tag=dt,
-                                    product="lasco",
-                                    channel=name,
-                                    local_path=local_path
-                                )
-                                session.add(entry)
-            except Exception as e:
-                print(f"LASCO {name} Ingest Fail: {e}")
-        session.commit()
+    for name, url in products:
+        try:
+            data = requests.get(url, timeout=10).json()
+            
+            candidates = []
+            for row in data:
+                rel_url = row['url']
+                filename = rel_url.split('/')[-1]
+                match = re.search(r'(\d{8}_\d{4})', filename)
+                if match:
+                    dt = datetime.strptime(match.group(1), "%Y%m%d_%H%M")
+                    candidates.append((filename, rel_url, dt))
+            
+            if not candidates: continue
+
+            with Session(engine) as session:
+                stmt = select(ImageArchive.local_path).where(
+                    ImageArchive.product == "lasco", 
+                    ImageArchive.channel == name
+                )
+                existing_paths = set(session.exec(stmt).all())
+
+            to_insert = []
+            for filename, rel_url, dt in candidates:
+                local_path = os.path.join(base_storage, filename)
+                if local_path not in existing_paths:
+                    full_url = "https://services.swpc.noaa.gov" + rel_url
+                    if download_file(full_url, local_path):
+                        to_insert.append((dt, local_path))
+            
+            if to_insert:
+                with Session(engine) as session:
+                    for dt, local_path in to_insert:
+                         if not session.exec(select(ImageArchive).where(ImageArchive.local_path == local_path)).first():
+                            entry = ImageArchive(
+                                time_tag=dt,
+                                product="lasco",
+                                channel=name,
+                                local_path=local_path
+                            )
+                            session.add(entry)
+                    session.commit()
+
+        except Exception as e:
+            print(f"LASCO {name} Ingest Fail: {e}")
 
 def ingest_aurora():
     products = [("north", URL_AURORA_N), ("south", URL_AURORA_S)]
     base_storage = os.path.join(IMAGE_DIR, "aurora")
     ensure_dir(base_storage)
     
-    with Session(engine) as session:
-        for name, url in products:
-            try:
-                data = requests.get(url, timeout=10).json()
-                for row in data:
-                    # {"url": "...", "time_tag": "2025-12-05T03:45:00Z"}
-                    t_str = row['time_tag']
-                    dt = datetime.strptime(t_str, "%Y-%m-%dT%H:%M:%SZ")
-                    
-                    stmt = select(ImageArchive).where(
-                        ImageArchive.time_tag == dt,
-                        ImageArchive.product == "aurora",
-                        ImageArchive.channel == name
-                    )
-                    existing = session.exec(stmt).first()
-                    
-                    if not existing:
-                        rel_url = row['url']
-                        filename = rel_url.split('/')[-1]
-                        full_url = "https://services.swpc.noaa.gov" + rel_url
-                        local_path = os.path.join(base_storage, filename)
-                        
-                        if download_file(full_url, local_path):
+    for name, url in products:
+        try:
+            data = requests.get(url, timeout=10).json()
+            
+            candidates = []
+            for row in data:
+                t_str = row['time_tag']
+                dt = datetime.strptime(t_str, "%Y-%m-%dT%H:%M:%SZ")
+                rel_url = row['url']
+                filename = rel_url.split('/')[-1]
+                candidates.append((filename, rel_url, dt))
+
+            if not candidates: continue
+
+            with Session(engine) as session:
+                stmt = select(ImageArchive.local_path).where(
+                    ImageArchive.product == "aurora", 
+                    ImageArchive.channel == name
+                )
+                existing_paths = set(session.exec(stmt).all())
+            
+            to_insert = []
+            for filename, rel_url, dt in candidates:
+                local_path = os.path.join(base_storage, filename)
+                if local_path not in existing_paths:
+                    full_url = "https://services.swpc.noaa.gov" + rel_url
+                    if download_file(full_url, local_path):
+                        to_insert.append((dt, local_path))
+
+            if to_insert:
+                with Session(engine) as session:
+                    for dt, local_path in to_insert:
+                        if not session.exec(select(ImageArchive).where(ImageArchive.local_path == local_path)).first():
                             entry = ImageArchive(
                                 time_tag=dt,
                                 product="aurora",
@@ -302,10 +336,10 @@ def ingest_aurora():
                                 local_path=local_path
                             )
                             session.add(entry)
-            except Exception as e:
-                print(f"Aurora {name} Ingest Fail: {e}")
-        session.commit()
+                    session.commit()
 
+        except Exception as e:
+            print(f"Aurora {name} Ingest Fail: {e}")
 
 def start_scheduler():
     scheduler = BackgroundScheduler()

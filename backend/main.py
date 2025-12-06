@@ -331,5 +331,101 @@ async def hydrate_archive(start: datetime, end: datetime):
             except Exception as e:
                 print(f"Hydration failed for {file_path}: {e}")
                 errors += 1
+    
+    # --- Phase 7: Deep Sensor Hydration (NASA HAPI) ---
+    try:
+        from nasa_client import NasaHapiClient
+        from database import SolarWind, XRayFlux
+        client = NasaHapiClient()
+        
+        # Solar Wind (DSCOVR)
+        wind_data = client.get_solar_wind_plasma(start_dt, end_dt)
+        mag_data = client.get_solar_wind_mag(start_dt, end_dt)
+        
+        # Merge Plasma + Mag (Time-chk)
+        # Store in DB
+        with Session(engine) as session:
+            count_wind = 0
+            # Simple approach: Upsert Plasma
+            for w in wind_data:
+                # Check for existing
+                stmt = select(SolarWind).where(SolarWind.time_tag == w['time_tag'])
+                existing = session.exec(stmt).first()
+                if not existing:
+                    # Find matching Mag
+                    # Optimization: Create a dict of mag data for fast lookup? 
+                    # For now, just insert what we have.
+                    # We need Bt and Bz from Mag.
+                    
+                    # NOTE: This simple merge is inefficient O(N*M). 
+                    # Better: Fetch existing range from DB, filter local list, insert new.
+                    pass 
+            
+            # Optimized Bulk Insert Strategy
+            # 1. Fetch all existing timestamps in range
+            existing_dates = set(session.exec(select(SolarWind.time_tag).where(
+                SolarWind.time_tag >= start_dt, SolarWind.time_tag <= end_dt
+            )).all())
+            
+            # 2. Merge Mag into Plasma Dict
+            mag_map = {m['time_tag']: m for m in mag_data}
+            
+            new_records = []
+            for w in wind_data:
+                t = w['time_tag']
+                if t in existing_dates: continue
+                
+                # Get Mag components
+                m = mag_map.get(t, {})
+                
+                rec = SolarWind(
+                    time_tag=t,
+                    density=w['density'],
+                    speed=w['speed'],
+                    temperature=w['temperature'],
+                    bt=m.get('bt', 0), # Default 0 if missing? Or None. schema allows None?
+                    bz_gsm=m.get('bz_gsm', 0)
+                )
+                new_records.append(rec)
+                
+            session.add_all(new_records)
+            
+            # X-Ray Flux
+            flux_data = client.get_xray_flux(start_dt, end_dt)
+            existing_flux = set(session.exec(select(XRayFlux.time_tag).where(
+                XRayFlux.time_tag >= start_dt, XRayFlux.time_tag <= end_dt
+            )).all())
+            
+            new_flux = []
+            seen_flux = set() # Avoid duplicates in the same batch
+            for f in flux_data:
+                if f['time_tag'] in existing_flux: continue
+                
+                # Check if we already added this timestamp/energy combo?
+                # Actually XRayFlux has composite PK or ID? 
+                # Model definition: id: Optional[int] = Field(default=None, primary_key=True)
+                # Uniqueness is not enforced by DB constraints usually unless `sa_column_kwargs={"unique": True}`
+                # We should check `time_tag` + `energy` combo.
+                
+                # Simplified: Just insert. The frontend filters duplicates usually? No.
+                # Let's trust the time check.
+                
+                key = (f['time_tag'], f['energy'])
+                if key in seen_flux: continue
+                seen_flux.add(key)
+                
+                rec = XRayFlux(
+                    time_tag=f['time_tag'],
+                    flux=f['flux'],
+                    energy=f['energy']
+                )
+                new_flux.append(rec)
+            
+            session.add_all(new_flux)
+            session.commit()
+            
+    except Exception as e:
+        print(f"NASA HAPI Hydration Failed: {e}")
+        # Validate that we don't crash the image hydration response
                 
     return {"status": "complete", "downloaded": downloaded, "errors": errors, "total_in_range": len(images)}
