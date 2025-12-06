@@ -76,7 +76,7 @@ export const ImageLoopWidget: React.FC<ImageLoopProps> = ({
 
     return (
         <div className="flex flex-col h-full bg-black/20 rounded-xl overflow-hidden border border-white/5 relative">
-            <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden group">
+            <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden group min-h-0">
                 {images.length > 0 ? (
                     <img
                         src={currentUrl}

@@ -98,7 +98,7 @@ export const AuroraWidget: React.FC = () => {
                 </div>
             )}
 
-            <div className="flex-1 relative">
+            <div className="flex-1 relative min-h-0">
                 {frames.length > 0 ? (
                     <img
                         src={frames[currentIndex]?.url}
