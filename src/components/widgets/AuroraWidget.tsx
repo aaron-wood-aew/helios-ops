@@ -103,7 +103,7 @@ export const AuroraWidget: React.FC = () => {
                     <img
                         src={frames[currentIndex]?.url}
                         alt="Aurora Forecast"
-                        className="w-full h-full object-contain"
+                        className="absolute inset-0 w-full h-full object-contain"
                     />
                 ) : (
                     <div className="flex items-center justify-center h-full text-slate-500 text-xs">No Data</div>

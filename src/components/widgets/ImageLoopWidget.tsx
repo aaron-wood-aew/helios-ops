@@ -81,7 +81,7 @@ export const ImageLoopWidget: React.FC<ImageLoopProps> = ({
                     <img
                         src={currentUrl}
                         alt="Loop Animation"
-                        className="w-full h-full object-contain"
+                        className="absolute inset-0 w-full h-full object-contain"
                     />
                 ) : (
                     <div className="text-slate-500 font-mono text-xs">Waiting for data...</div>
