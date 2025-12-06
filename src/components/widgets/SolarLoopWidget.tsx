@@ -83,7 +83,7 @@ export const SolarLoopWidget: React.FC = () => {
                 </button>
 
                 {showMenu && (
-                    <div className="absolute bottom-10 left-0 flex flex-col gap-1 bg-black/90 p-2 rounded backdrop-blur-md border border-white/10 z-50 w-48 shadow-xl animate-in fade-in slide-in-from-bottom-2">
+                    <div className="absolute bottom-10 right-0 flex flex-col gap-1 bg-black/90 p-2 rounded backdrop-blur-md border border-white/10 z-50 w-48 shadow-xl animate-in fade-in slide-in-from-bottom-2">
                         {CHANNELS.map(ch => (
                             <button
                                 key={ch.id}
