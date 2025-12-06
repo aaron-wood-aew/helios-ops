@@ -106,10 +106,10 @@ export const SolarWindChart: React.FC<SolarWindChartProps> = ({ syncId, domain }
                     />
 
                     {/* Left Axis: Speed (km/s) */}
-                    <YAxis yAxisId="left" stroke="#0ea5e9" tick={{ fontSize: 9 }} domain={['auto', 'auto']} label={{ value: 'km/s', angle: -90, position: 'insideLeft', fill: '#0ea5e9', fontSize: 9 }} width={30} />
+                    <YAxis yAxisId="left" stroke="#0ea5e9" tick={{ fontSize: 9 }} domain={['auto', 'auto']} label={{ value: 'km/s', angle: -90, position: 'insideLeft', fill: '#0ea5e9', fontSize: 9 }} width={50} />
 
                     {/* Right Axis: Bz (nT) */}
-                    <YAxis yAxisId="right" orientation="right" stroke="#ef4444" tick={{ fontSize: 9 }} domain={['auto', 'auto']} label={{ value: 'Bz (nT)', angle: 90, position: 'insideRight', fill: '#ef4444', fontSize: 9 }} width={30} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#ef4444" tick={{ fontSize: 9 }} domain={['auto', 'auto']} label={{ value: 'Bz (nT)', angle: 90, position: 'insideRight', fill: '#ef4444', fontSize: 9 }} width={50} />
 
                     <Tooltip
                         contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }}

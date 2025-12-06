@@ -84,7 +84,7 @@ export const InterplanetaryMagChart: React.FC<InterplanetaryMagChartProps> = ({ 
                         stroke="#e2e8f0"
                         domain={['auto', 'auto']}
                         tick={{ fontSize: 9 }}
-                        width={30}
+                        width={50}
                         label={{ value: 'nT', angle: -90, position: 'insideLeft', fill: '#e2e8f0', fontSize: 9 }}
                     />
                     <Tooltip

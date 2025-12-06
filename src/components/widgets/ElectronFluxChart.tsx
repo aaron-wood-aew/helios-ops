@@ -57,8 +57,8 @@ export const ElectronFluxChart: React.FC<ElectronFluxChartProps> = ({ syncId, do
 
         const rawFiltered = data.filter(d => (d as any).time >= start - buffer && (d as any).time <= end + buffer);
 
-        // 5-minute cadence typically
-        return ensureContinuousData(rawFiltered, start, end, 300000, 'null');
+        // Align to 1-minute grid to match Solar Wind/Magnetometer for perfect sync
+        return ensureContinuousData(rawFiltered, start, end, 60000, 'null');
     }, [data, domain]);
 
     if (loading) return <div className="h-full flex items-center justify-center text-space-blue"><Loader2 className="animate-spin" /></div>;
@@ -82,7 +82,7 @@ export const ElectronFluxChart: React.FC<ElectronFluxChartProps> = ({ syncId, do
                         domain={[10, 10000]}
                         scale="log"
                         tick={{ fontSize: 9 }}
-                        width={30}
+                        width={50}
                         label={{ value: 'pfu', angle: -90, position: 'insideLeft', fill: '#fbbf24', fontSize: 9 }}
                     />
                     <Tooltip
