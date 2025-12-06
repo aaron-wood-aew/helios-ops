@@ -10,13 +10,74 @@ import re
 from fastapi.staticfiles import StaticFiles
 import os
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+# authentication imports
+from fastapi import FastAPI, Query, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from auth import create_access_token, get_current_active_user, get_current_admin_user, get_password_hash, verify_password, ACCESS_TOKEN_EXPIRE_MINUTES
+from database import User
+from datetime import timedelta
+
+# ... middleware code ...
+
+
+app = FastAPI(title="Helios.Ops Backend")
+
+# Ensure directory exists first or StaticFiles might complain if missing on startup
+if not os.path.exists("images"):
+    os.makedirs("images")
+app.mount("/static/images", StaticFiles(directory="images"), name="images")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Authentication Endpoints
+
+@app.post("/token")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == form_data.username)).first()
+        if not user or not verify_password(form_data.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.username}, expires_delta=access_token_expires
+        )
+        return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    return current_user
+
+@app.get("/api/admin/system-status")
+async def get_system_status(current_user: User = Depends(get_current_admin_user)):
+    return {"status": "operational", "user": current_user.username}
+
+@app.on_event("startup")
+def on_startup():
     create_db_and_tables()
     start_scheduler()
-    yield
 
-app = FastAPI(title="Helios.Ops Backend", lifespan=lifespan)
+    # Initialize Default Admin
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == "admin")).first()
+        if not user:
+            print("Creating default admin user...")
+            admin_user = User(
+                username="admin",
+                hashed_password=get_password_hash("admin"), # TODO: Change this!
+                is_superuser=True
+            )
+            session.add(admin_user)
+            session.commit()
 
 # Ensure directory exists first or StaticFiles might complain if missing on startup
 if not os.path.exists("images"):

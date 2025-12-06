@@ -10,8 +10,8 @@ services:
 
   backend:
     build: ./backend
-    ports:
-      - "8000:8000"
+    # ports:
+    #   - "8000:8000" # Removed for security (access via Nginx only)
     environment:
       - DB_PATH=/app/data/space_weather.db
     volumes:

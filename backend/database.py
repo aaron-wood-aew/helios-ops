@@ -40,6 +40,13 @@ class ImageArchive(SQLModel, table=True):
     channel: str # e.g. "131", "c2", "north"
     local_path: str # e.g. "images/suvi/20251206_034400_131.png"
 
+class User(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str = Field(index=True, unique=True)
+    hashed_password: str
+    is_active: bool = Field(default=True)
+    is_superuser: bool = Field(default=False)
+
 import os
 
 # Database Setup

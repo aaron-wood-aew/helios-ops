@@ -14,10 +14,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source
 COPY . .
 
-# Create images directory
-RUN mkdir -p images
+# Create a non-root user
+RUN addgroup --system appgroup && adduser --system --group appuser
 
-# Expose port
+# Create directories and set permissions
+RUN mkdir -p /app/data /app/images && chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose port (internal only)
 EXPOSE 8000
 
 # Run
