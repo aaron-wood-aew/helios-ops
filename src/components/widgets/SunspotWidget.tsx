@@ -24,6 +24,11 @@ export const SunspotWidget: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
+    // Filter for latest data only
+    const sortedRegions = [...regions].sort((a, b) => new Date(b.observed_date).getTime() - new Date(a.observed_date).getTime());
+    const latestDate = sortedRegions[0]?.observed_date;
+    const activeRegions = regions.filter(r => r.observed_date === latestDate);
+
     const project = (latDeg: number, lonDeg: number, radius: number) => {
         const lat = latDeg * (Math.PI / 180);
         const lon = lonDeg * (Math.PI / 180);
@@ -53,12 +58,23 @@ export const SunspotWidget: React.FC = () => {
                 </div>
             )}
 
-            <div className="relative w-[300px] h-[300px] flex items-center justify-center">
-                {/* Solar Disk */}
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg shadow-orange-900/50 opacity-90"></div>
+            <div className="relative w-[300px] h-[300px] flex items-center justify-center group/disk">
+                {/* Solar Disk - Real Image or Gradient Fallback */}
+                <div className="absolute inset-0 rounded-full bg-black overflow-hidden">
+                    <img
+                        src="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_HMIIC.jpg"
+                        alt="Sun Disk"
+                        className="w-full h-full object-cover opacity-80"
+                        onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.parentElement!.style.background = 'linear-gradient(to bottom right, #fb923c, #ea580c)';
+                        }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-br from-orange-400/20 to-orange-600/20 mix-blend-overlay"></div>
+                </div>
 
                 {/* Grid Lines (simplified) */}
-                <svg className="absolute inset-0 w-full h-full opacity-30 pointer-events-none">
+                <svg className="absolute inset-0 w-full h-full opacity-20 pointer-events-none">
                     <circle cx="150" cy="150" r="140" fill="none" stroke="white" strokeWidth="1" />
                     {/* Equator */}
                     <line x1="10" y1="150" x2="290" y2="150" stroke="white" strokeWidth="1" strokeDasharray="4 4" />
@@ -67,7 +83,7 @@ export const SunspotWidget: React.FC = () => {
                 </svg>
 
                 {/* Sunspots */}
-                {regions.map((r) => {
+                {activeRegions.map((r) => {
                     // Only show frontside? Usually JSON is frontside.
                     const { x, y } = project(r.latitude, r.longitude, RADIUS);
                     const isSelected = selectedRegion?.region === r.region;
